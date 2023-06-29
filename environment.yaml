@@ -1,0 +1,10 @@
+name: schema-routing
+channels:
+  - defaults
+  - conda-forge
+  - pytorch
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      - --requirement requirements.txt

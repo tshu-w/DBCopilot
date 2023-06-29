@@ -1,0 +1,24 @@
+seed_everything: 123
+trainer:
+  max_epochs: 10
+model:
+  class_path: src.models.Seq2SeqModel
+  init_args:
+    model_name_or_path: ./models/t5-base
+    weight_decay: 0.0
+    learning_rate: 5.0e-05
+    scheduler_type: linear
+    warmup_steps: 0
+data:
+  class_path: src.datamodules.Text2Schema
+  init_args:
+    data_files:
+      train:
+        - data/train_spider.json
+        - data/train_bird.json
+      validation:
+        - data/dev_spider.json
+        - data/dev_bird.json
+    batch_size: 32
+    num_workers: 8
+    pin_memory: true

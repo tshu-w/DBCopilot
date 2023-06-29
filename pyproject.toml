@@ -1,0 +1,27 @@
+# https://github.com/psf/black
+[tool.black]
+line-length = 88
+
+# https://github.com/microsoft/pyright
+[tool.pyright]
+include = ["src"]
+exclude = [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/.*",
+    "src/vendor",
+]
+venv = "schema-routing"
+typeCheckingMode = "off"
+useLibraryCodeForTypes = true
+
+# https://github.com/charliermarsh/ruff
+[tool.ruff]
+select = ["E", "F", "I", "UP"]
+fix = true
+ignore = ["E501", "E402"]
+target-version = "py38"
+
+# https://github.com/timothycrosley/isort/
+[tool.ruff.isort]
+combine-as-imports = true

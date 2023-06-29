@@ -1,0 +1,21 @@
+--find-links https://download.pytorch.org/whl/cu113/torch_stable.html
+torch >= 2.0.0
+lightning >= 2.0.0
+torchvision
+jsonargparse[signatures] # for CLI
+
+transformers
+scikit-learn
+datasets
+evaluate
+
+guidance
+pandas
+sqlparse
+nltk
+sqlglot
+
+# dev tools
+wandb
+jupyterlab
+shtab

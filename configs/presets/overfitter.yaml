@@ -1,0 +1,2 @@
+trainer:
+  overfit_batches: 0.01

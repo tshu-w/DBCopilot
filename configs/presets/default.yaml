@@ -1,0 +1,12 @@
+seed_everything: 42
+trainer:
+  default_root_dir: results
+  callbacks:
+    class_path: Metric
+  logger:
+    class_path: WandbLogger
+    init_args:
+      project: schema-routing
+      save_dir: results
+  accelerator: auto
+  devices: 1

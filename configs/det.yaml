@@ -1,0 +1,22 @@
+description: schema-routing
+
+environment:
+  image: docker.cipsup.cn/wangtianshu/base
+  force_pull_image: true
+  environment_variables:
+    - PATH=/home/tianshu2020/.local/share/conda/envs/schema-routing/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+bind_mounts:
+  - host_path: /ceph_home/tianshu2020/resources/data/schema-routing/
+    container_path: /run/determined/workdir/data
+  - host_path: /ceph_home/tianshu2020/resources/models
+    container_path: /run/determined/workdir/models
+  - host_path: /ceph_home/tianshu2020/resources/results/schema-routing/
+    container_path: /run/determined/workdir/results
+  - host_path: /ceph_home/tianshu2020
+    container_path: /home/tianshu2020
+
+resources:
+  slots: 1
+  resource_pool: TITAN-24G
+  shm_size: 16G
