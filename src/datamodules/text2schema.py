@@ -16,9 +16,7 @@ def preprocess(batch, tokenizer):
         tables = " ".join(f"({t['name']} {' '.join(t['columns'])})" for t in metadata)
         targets.append(f"({db} {tables})")
 
-    features = tokenizer(batch["question"])
-    with tokenizer.as_target_tokenizer():
-        features["labels"] = tokenizer(targets)["input_ids"]
+    features = tokenizer(text=batch["question"], text_target=targets)
 
     return features
 
