@@ -23,13 +23,6 @@ class LitCLI(LightningCLI):
                 logger.init_args.save_dir = os.path.join(
                     logger.init_args.get("save_dir", "results"), self.subcommand
                 )
-                # rules to customize the experiment name
-                exp_name = config.model.class_path.split(".")[-1]
-                if hasattr(config, "data"):
-                    data_name = config.data.class_path.split(".")[-1]
-                    exp_name = f"{exp_name}/{data_name}"
-                if hasattr(logger.init_args, "name"):
-                    logger.init_args.name = exp_name
 
 
 def lit_cli():
