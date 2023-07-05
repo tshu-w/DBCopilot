@@ -16,7 +16,7 @@ data:
       train:
         - data/train_spider.json
         - data/train_bird.json
-      validation:
+      test:
         - data/dev_spider.json
         - data/dev_bird.json
     batch_size: 32

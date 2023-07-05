@@ -26,7 +26,7 @@ class Text2Schema(pl.LightningDataModule):
         self,
         data_files: dict = {
             "train": ["data/train_spider.json"],
-            "validation": ["data/dev_spider.json"],
+            "test": ["data/dev_spider.json"],
         },
         *,
         preprocessing_num_workers: int = None,
@@ -45,9 +45,13 @@ class Text2Schema(pl.LightningDataModule):
     def setup(self, stage: Optional[str] = None) -> None:
         if not hasattr(self, "datasets"):
             datasets = load_dataset("json", data_files=self.data_files)
-            self.trainer.model.tokenizer.deprecation_warnings[
-                "Asking-to-pad-a-fast-tokenizer"
-            ] = True
+            if "validation" not in datasets:
+                datasets_split = datasets["train"].train_test_split(
+                    test_size=0.1, shuffle=True
+                )
+                datasets["train"] = datasets_split["train"]
+                datasets["validation"] = datasets_split["test"]
+
             _preprocess = partial(preprocess, tokenizer=self.trainer.model.tokenizer)
             self.datasets = datasets.map(
                 _preprocess,
@@ -72,6 +76,16 @@ class Text2Schema(pl.LightningDataModule):
     def val_dataloader(self) -> EVAL_DATALOADERS:
         return DataLoader(
             dataset=self.datasets["validation"],
+            batch_size=self.hparams.batch_size,
+            num_workers=self.hparams.num_workers,
+            pin_memory=self.hparams.pin_memory,
+            collate_fn=self.collate_fn,
+            persistent_workers=self.hparams.num_workers > 0,
+        )
+
+    def test_dataloader(self) -> EVAL_DATALOADERS:
+        return DataLoader(
+            dataset=self.datasets["test"],
             batch_size=self.hparams.batch_size,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
