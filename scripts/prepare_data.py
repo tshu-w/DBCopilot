@@ -1,6 +1,7 @@
 import json
 import sys
 from pathlib import Path
+from typing import Literal
 
 from sqlglot import exp, parse_one
 from tqdm import tqdm
@@ -15,7 +16,10 @@ def extract_metadata(sql_query: str, database: list[dict]):
     columns = [c.name.lower() for c in parsed_query.find_all(exp.Column)]
 
     metadata = [
-        {"name": t["name"], "columns": list(t["columns"].intersection(set(columns)))}
+        {
+            "name": t["name"],
+            "columns": [c for c in t["columns"] if c in columns],
+        }
         for t in database
         if t["name"] in tables
     ]
@@ -23,25 +27,58 @@ def extract_metadata(sql_query: str, database: list[dict]):
     return metadata
 
 
-def spider(dir=Path("./data/spider/")):
-    with (dir / "tables.json").open() as f:
-        raw_tables = json.load(f)
-
+def get_databases_info(
+    dataset: Literal["spider", "bird"] = "spider",
+) -> dict:
     databases = {}
-    for db in raw_tables:
-        tables = []
-        for i, table_name in enumerate(db["table_names_original"]):
-            columns = set(
-                map(
-                    lambda x: x[1].lower(),
-                    filter(lambda x: x[0] == i, db["column_names_original"]),
+    if dataset == "spider":
+        path = Path("./data/spider")
+        with (path / "tables.json").open(mode="r") as file:
+            raw_tables = json.load(file)
+
+        for db in raw_tables:
+            tables = []
+            for i, table_name in enumerate(db["table_names_original"]):
+                columns = list(
+                    map(
+                        lambda x: x[1].lower(),
+                        filter(lambda x: x[0] == i, db["column_names_original"]),
+                    )
                 )
-            )
-            tables.append({"name": table_name.lower(), "columns": columns})
+                tables.append({"name": table_name.lower(), "columns": columns})
 
-        databases[db["db_id"]] = tables
+            databases[db["db_id"]] = tables
+    elif dataset == "bird":
+        path = Path("./data/bird/")
+        with (path / "train" / "train_tables.json").open() as f:
+            raw_tables = json.load(f)
 
-    train_files = list(dir.glob("train_*.json"))
+        with (path / "dev" / "dev_tables.json").open() as f:
+            raw_tables.extend(json.load(f))
+
+        databases = {}
+        for db in raw_tables:
+            tables = []
+            for i, table_name in enumerate(db["table_names_original"]):
+                columns = list(
+                    map(
+                        lambda x: x[1].lower(),
+                        filter(lambda x: x[0] == i, db["column_names_original"]),
+                    )
+                )
+                tables.append({"name": table_name.lower(), "columns": columns})
+
+            databases[db["db_id"]] = tables
+    else:
+        raise ValueError(f"Unknown dataset: {dataset}")
+
+    return databases
+
+
+def spider(path=Path("./data/spider/")):
+    databases = get_databases_info("spider")
+
+    train_files = list(path.glob("train_*.json"))
     train_data = []
     for f in train_files:
         with f.open() as f:
@@ -56,10 +93,10 @@ def spider(dir=Path("./data/spider/")):
         for key in ["query_toks", "query_toks_no_value", "question_toks", "sql"]:
             record.pop(key, None)
 
-    with (dir.parent / "train_spider.json").open("w") as f:
-        json.dump(train_data, f, indent=2, sort_keys=True)
+    with (path.parent / "train_spider.json").open("w") as f:
+        json.dump(train_data, f, indent=2)
 
-    with (dir / "dev.json").open() as f:
+    with (path / "dev.json").open() as f:
         dev_data = json.load(f)
 
     for record in tqdm(dev_data):
@@ -71,32 +108,14 @@ def spider(dir=Path("./data/spider/")):
         for key in ["query_toks", "query_toks_no_value", "question_toks", "sql"]:
             record.pop(key, None)
 
-    with (dir.parent / "dev_spider.json").open("w") as f:
-        json.dump(train_data, f, indent=2, sort_keys=True)
+    with (path.parent / "dev_spider.json").open("w") as f:
+        json.dump(dev_data, f, indent=2)
 
 
-def bird(dir=Path("./data/bird/")):
-    with (dir / "train" / "train_tables.json").open() as f:
-        raw_tables = json.load(f)
+def bird(path=Path("./data/bird/")):
+    databases = get_databases_info("bird")
 
-    with (dir / "dev" / "dev_tables.json").open() as f:
-        raw_tables.extend(json.load(f))
-
-    databases = {}
-    for db in raw_tables:
-        tables = []
-        for i, table_name in enumerate(db["table_names_original"]):
-            columns = set(
-                map(
-                    lambda x: x[1].lower(),
-                    filter(lambda x: x[0] == i, db["column_names_original"]),
-                )
-            )
-            tables.append({"name": table_name.lower(), "columns": columns})
-
-        databases[db["db_id"]] = tables
-
-    with (dir / "train" / "train.json").open() as f:
+    with (path / "train" / "train.json").open() as f:
         train_data = json.load(f)
 
     for record in tqdm(train_data[:]):
@@ -113,10 +132,10 @@ def bird(dir=Path("./data/bird/")):
         except Exception:
             train_data.remove(record)
 
-    with (dir.parent / "train_bird.json").open("w") as f:
-        json.dump(train_data, f, indent=2, sort_keys=True)
+    with (path.parent / "train_bird.json").open("w") as f:
+        json.dump(train_data, f, indent=2)
 
-    with (dir / "dev" / "dev.json").open() as f:
+    with (path / "dev" / "dev.json").open() as f:
         dev_data = json.load(f)
 
     for record in tqdm(dev_data[:]):
@@ -139,8 +158,8 @@ def bird(dir=Path("./data/bird/")):
         except Exception:
             dev_data.remove(record)
 
-    with (dir.parent / "dev_bird.json").open("w") as f:
-        json.dump(dev_data, f, indent=2, sort_keys=True)
+    with (path.parent / "dev_bird.json").open("w") as f:
+        json.dump(dev_data, f, indent=2)
 
 
 if __name__ == "__main__":

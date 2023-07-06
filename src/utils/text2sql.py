@@ -1,12 +1,13 @@
 import guidance
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 
+@retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, max=10))
 def text2sql(
     question: str,
     database: list[dict],
-    model_name: str = "gpt-3.5-turbo",
+    model: guidance.llms.LLM,
 ):
-    model = guidance.llms.OpenAI(model_name)
     if model.chat_mode:
         program = guidance(
             """
@@ -18,7 +19,7 @@ def text2sql(
 ### Complete sqlite SQL query only and with no explanation
 ### Sqlite SQL tables, with their properties:
 #
-# {{#each database}}{{this.name}}({{#each this.columns}}{{this}}{{#unless @last}}, {{/unless}}{{/each}})
+# {{#each database}}{{this.name}}({{#each this.columns}}`{{this}}`{{#unless @last}}, {{/unless}}{{/each}})
 # {{/each}}
 ### {{question}}
 SELECT
@@ -33,7 +34,7 @@ SELECT
             """### Complete sqlite SQL query only and with no explanation
 ### Sqlite SQL tables, with their properties:
 #
-# {{#each database}}{{this.name}}({{#each this.columns}}{{this}}{{#unless @last}}, {{/unless}}{{/each}})
+# {{#each database}}{{this.name}}({{#each this.columns}}`{{this}}`{{#unless @last}}, {{/unless}}{{/each}})
 # {{/each}}
 ### {{question}}
 SELECT {{~gen "query" temperature=0 stop=";"}}"""
