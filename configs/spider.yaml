@@ -1,0 +1,11 @@
+data:
+  class_path: src.datamodules.Text2Schema
+  init_args:
+    data_files:
+      train:
+        - data/train_spider.json
+      test:
+        - data/dev_spider.json
+    batch_size: 32
+    num_workers: 8
+    pin_memory: true
