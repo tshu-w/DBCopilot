@@ -11,8 +11,8 @@ sys.path.append(str(Path(__file__).parents[1]))
 def extract_metadata(sql_query: str, database: list[dict]):
     parsed_query = parse_one(sql_query, read="sqlite")
 
-    tables = [t.name for t in parsed_query.find_all(exp.Table)]
-    columns = [c.name for c in parsed_query.find_all(exp.Column)]
+    tables = [t.name.lower() for t in parsed_query.find_all(exp.Table)]
+    columns = [c.name.lower() for c in parsed_query.find_all(exp.Column)]
 
     metadata = [
         {"name": t["name"], "columns": list(t["columns"].intersection(set(columns)))}
@@ -33,11 +33,11 @@ def spider(dir=Path("./data/spider/")):
         for i, table_name in enumerate(db["table_names_original"]):
             columns = set(
                 map(
-                    lambda x: x[1],
+                    lambda x: x[1].lower(),
                     filter(lambda x: x[0] == i, db["column_names_original"]),
                 )
             )
-            tables.append({"name": table_name, "columns": columns})
+            tables.append({"name": table_name.lower(), "columns": columns})
 
         databases[db["db_id"]] = tables
 
@@ -84,11 +84,11 @@ def bird(dir=Path("./data/bird/")):
         for i, table_name in enumerate(db["table_names_original"]):
             columns = set(
                 map(
-                    lambda x: x[1],
+                    lambda x: x[1].lower(),
                     filter(lambda x: x[0] == i, db["column_names_original"]),
                 )
             )
-            tables.append({"name": table_name, "columns": columns})
+            tables.append({"name": table_name.lower(), "columns": columns})
 
         databases[db["db_id"]] = tables
 
