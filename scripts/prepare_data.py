@@ -49,8 +49,10 @@ def spider(dir=Path("./data/spider/")):
 
     for record in tqdm(train_data):
         metadata = extract_metadata(record["query"], databases[record["db_id"]])
-        record["metadata"] = metadata
-        record["database"] = record.pop("db_id")
+        record["schema"] = {
+            "database": record.pop("db_id"),
+            "metadata": metadata,
+        }
         for key in ["query_toks", "query_toks_no_value", "question_toks", "sql"]:
             record.pop(key, None)
 
@@ -62,8 +64,10 @@ def spider(dir=Path("./data/spider/")):
 
     for record in tqdm(dev_data):
         metadata = extract_metadata(record["query"], databases[record["db_id"]])
-        record["metadata"] = metadata
-        record["database"] = record.pop("db_id")
+        record["schema"] = {
+            "database": record.pop("db_id"),
+            "metadata": metadata,
+        }
         for key in ["query_toks", "query_toks_no_value", "question_toks", "sql"]:
             record.pop(key, None)
 
@@ -99,8 +103,10 @@ def bird(dir=Path("./data/bird/")):
         db_id = record["db_id"] if record["db_id"] != "movies_4" else "movie_4"
         try:
             metadata = extract_metadata(record["SQL"], databases[db_id])
-            record["metadata"] = metadata
-            record["database"] = record.pop("db_id")
+            record["schema"] = {
+                "database": record.pop("db_id"),
+                "metadata": metadata,
+            }
             record["query"] = record.pop("SQL")
             for key in ["question_toks", "SQL_toks", "evidence_toks", "evidence"]:
                 record.pop(key, None)
@@ -117,8 +123,10 @@ def bird(dir=Path("./data/bird/")):
         db_id = record["db_id"] if record["db_id"] != "movies_4" else "movie_4"
         try:
             metadata = extract_metadata(record["SQL"], databases[db_id])
-            record["metadata"] = metadata
-            record["database"] = record.pop("db_id")
+            record["schema"] = {
+                "database": record.pop("db_id"),
+                "metadata": metadata,
+            }
             record["query"] = record.pop("SQL")
             for key in [
                 "question_toks",

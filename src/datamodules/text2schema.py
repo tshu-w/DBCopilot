@@ -12,9 +12,11 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 def preprocess(batch, tokenizer):
     targets = []
-    for db, metadata in zip(batch["database"], batch["metadata"]):
-        tables = " ".join(f"({t['name']} {' '.join(t['columns'])})" for t in metadata)
-        targets.append(f"({db} {tables})")
+    for schema in batch["schema"]:
+        tables = " ".join(
+            f"({t['name']} {' '.join(t['columns'])})" for t in schema["metadata"]
+        )
+        targets.append(f"({schema['database']} {tables})")
 
     features = tokenizer(text=batch["question"], text_target=targets)
 
