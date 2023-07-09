@@ -1,3 +1,6 @@
 [submodule "test-suite-sql-eval"]
 	path = src/vendor/test-suite-sql-eval
 	url = https://github.com/taoyds/test-suite-sql-eval.git
+[submodule "DAMO-ConvAI"]
+	path = src/vendor/DAMO-ConvAI
+	url = https://github.com/AlibabaResearch/DAMO-ConvAI.git

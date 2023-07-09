@@ -15,6 +15,7 @@ sqlparse
 nltk
 sqlglot
 tenacity
+func-timeout
 
 # dev tools
 wandb
