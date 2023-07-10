@@ -10,15 +10,30 @@ from torch.utils.data import DataLoader
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
-def preprocess(batch, tokenizer):
+def preprocess(batch, tokenizer, separator):
     targets = []
     for schema in batch["schema"]:
-        tables = " ".join(
-            f"({t['name']} {' '.join(t['columns'])})" for t in schema["metadata"]
+        assert separator not in schema["database"]
+        assert all(separator not in t["name"] for t in schema["metadata"])
+        assert all(
+            separator not in column
+            for t in schema["metadata"]
+            for column in t["columns"]
         )
-        targets.append(f"({schema['database']} {tables})")
+
+        tables = separator.join(
+            f"({separator}{t['name']}{separator}{separator.join(t['columns'])}{separator})"
+            for t in schema["metadata"]
+        )
+        targets.append(
+            f"({separator}{schema['database']}{separator}{tables}{separator})"
+        )
 
     features = tokenizer(text=batch["question"], text_target=targets)
+
+    for i, label in enumerate(features["labels"]):
+        if tokenizer.unk_token_id in label:
+            print(batch["schema"][i], label)
 
     return features
 
@@ -54,7 +69,11 @@ class Text2Schema(pl.LightningDataModule):
                 datasets["train"] = datasets_split["train"]
                 datasets["validation"] = datasets_split["test"]
 
-            _preprocess = partial(preprocess, tokenizer=self.trainer.model.tokenizer)
+            _preprocess = partial(
+                preprocess,
+                tokenizer=self.trainer.model.tokenizer,
+                separator=self.trainer.model.hparams.separator,
+            )
             self.datasets = datasets.map(
                 _preprocess,
                 batched=True,

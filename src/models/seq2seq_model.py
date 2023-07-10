@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import Optional
 
 import lightning.pytorch as pl
@@ -13,11 +14,11 @@ from transformers import (
 from .modules import F1Score
 
 
-def str2schema(s: str) -> dict:
+def str2schema(s: str, separator: str) -> dict:
     """
     Converts string representation of a database schema into nested dictionary.
 
-    Input: '(<database_name> (<table_name_1> <column_name_1> <column_name_2>) (<table_name_2> <column_name_1> <column_name_2> <column_name_3>) (<table_name_3> <column_name_1>))'
+    Input: '( <database_name> ( <table_name_1> <column_name_1> <column_name_2> ) ( <table_name_2> <column_name_1> <column_name_2> <column_name_3> ) ( <table_name_3> <column_name_1> ) )'
 
     Output: {
         "<database_name>": {
@@ -29,17 +30,14 @@ def str2schema(s: str) -> dict:
     """
 
     try:
-        schema = {}
-        trimmed_str = s.strip()[1:-1]  # removing the opening and closing brackets
-        database, tables = trimmed_str.split("(", 1)
-        database = database.strip()
-        schema[database] = {}
-        tables = tables.split(") (")
+        schema = defaultdict(dict)
+        trimmed_str = s[1:-1][len(separator) : -len(separator)]
+        database, tables = trimmed_str.split(separator, 1)
+        tables = tables[1:-1].split(f"){separator}(")
         for table in tables:
-            table = table.strip("() ")
-            table_name, columns = table.split(" ", 1)
-            columns = columns.split()
-            schema[database][table_name.strip()] = columns
+            table = table[len(separator) : -len(separator)]
+            table_name, *columns = table.split(separator)
+            schema[database][table_name] = columns
 
         return schema
 
@@ -51,7 +49,12 @@ class Seq2SeqModel(pl.LightningModule):
     def __init__(
         self,
         model_name_or_path: str,
-        generator_config: dict = {"max_new_tokens": 512},
+        generator_config: dict = {
+            "max_new_tokens": 512,
+            "num_beams": 1,
+            "prefix_allowed_tokens_fn": None,
+        },
+        separator: str = "|",
         *,
         weight_decay: float = 0.0,
         learning_rate: float = 2e-5,
@@ -63,6 +66,10 @@ class Seq2SeqModel(pl.LightningModule):
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name_or_path)
+        if separator not in self.tokenizer.get_vocab():
+            self.tokenizer.add_tokens([separator])
+            self.model.resize_token_embeddings(len(self.tokenizer))
+
         self.collate_fn = DataCollatorForSeq2Seq(
             tokenizer=self.tokenizer, model=self.model
         )
@@ -96,14 +103,14 @@ class Seq2SeqModel(pl.LightningModule):
         self.log("val/loss", loss, prog_bar=True)
         outputs = self.model.generate(**batch, **self.hparams.generator_config)
         pred_schemas = [
-            str2schema(s)
+            str2schema(s, self.hparams.separator)
             for s in self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
         ]
         labels = torch.where(
             batch["labels"] != -100, batch["labels"], self.tokenizer.pad_token_id
         )
         target_schemas = [
-            str2schema(s)
+            str2schema(s, self.hparams.separator)
             for s in self.tokenizer.batch_decode(labels, skip_special_tokens=True)
         ]
         self.update_metrics(pred_schemas, target_schemas, step="val")
@@ -116,14 +123,14 @@ class Seq2SeqModel(pl.LightningModule):
         self.log("test/loss", loss, prog_bar=True)
         outputs = self.model.generate(**batch, **self.hparams.generator_config)
         pred_schemas = [
-            str2schema(s)
+            str2schema(s, self.hparams.separator)
             for s in self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
         ]
         labels = torch.where(
             batch["labels"] != -100, batch["labels"], self.tokenizer.pad_token_id
         )
         target_schemas = [
-            str2schema(s)
+            str2schema(s, self.hparams.separator)
             for s in self.tokenizer.batch_decode(labels, skip_special_tokens=True)
         ]
         self.update_metrics(pred_schemas, target_schemas, step="test")
