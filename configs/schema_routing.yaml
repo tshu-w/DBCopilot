@@ -8,7 +8,10 @@ model:
     generator_config:
       max_new_tokens: 512
       num_beams: 1
-    separator: "|"
+    delimiters:
+      initiator: "<(>"
+      separator: "< >"
+      terminator: "<)>"
     weight_decay: 0.0
     learning_rate: 5.0e-05
     scheduler_type: linear

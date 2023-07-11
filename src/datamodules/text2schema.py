@@ -10,30 +10,34 @@ from torch.utils.data import DataLoader
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
-def preprocess(batch, tokenizer, separator):
+def preprocess(batch, tokenizer, delimiters):
+    initiator = delimiters["initiator"]
+    separator = delimiters["separator"]
+    terminator = delimiters["terminator"]
+
     targets = []
     for schema in batch["schema"]:
-        assert separator not in schema["database"]
-        assert all(separator not in t["name"] for t in schema["metadata"])
-        assert all(
-            separator not in column
-            for t in schema["metadata"]
-            for column in t["columns"]
-        )
+        for token in delimiters.values():
+            assert token not in schema["database"]
+            assert all(token not in t["name"] for t in schema["metadata"])
+            assert all(
+                token not in column
+                for t in schema["metadata"]
+                for column in t["columns"]
+            )
 
         tables = separator.join(
-            f"({separator}{t['name']}{separator}{separator.join(t['columns'])}{separator})"
+            f"{initiator}{t['name']}{separator}{separator.join(t['columns'])}{terminator}"
             for t in schema["metadata"]
         )
         targets.append(
-            f"({separator}{schema['database']}{separator}{tables}{separator})"
+            f"{initiator}{schema['database']}{separator}{tables}{terminator}"
         )
 
     features = tokenizer(text=batch["question"], text_target=targets)
 
     for i, label in enumerate(features["labels"]):
-        if tokenizer.unk_token_id in label:
-            print(batch["schema"][i], label)
+        assert tokenizer.unk_token_id not in label
 
     return features
 
@@ -72,7 +76,7 @@ class Text2Schema(pl.LightningDataModule):
             _preprocess = partial(
                 preprocess,
                 tokenizer=self.trainer.model.tokenizer,
-                separator=self.trainer.model.hparams.separator,
+                delimiters=self.trainer.model.hparams.delimiters,
             )
             self.datasets = datasets.map(
                 _preprocess,
