@@ -30,6 +30,10 @@ def str2schema(s: str, separator: str) -> dict:
     """
 
     try:
+        # Remove space after separator for t5,
+        # see https://github.com/huggingface/transformers/issues/24743
+        s = s.replace(f"{separator} ", f"{separator}")
+
         schema = defaultdict(dict)
         trimmed_str = s[1:-1][len(separator) : -len(separator)]
         database, tables = trimmed_str.split(separator, 1)
@@ -66,8 +70,10 @@ class Seq2SeqModel(pl.LightningModule):
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name_or_path)
-        if separator not in self.tokenizer.get_vocab():
-            self.tokenizer.add_tokens([separator])
+
+        tokens = [separator, "(", ")"]
+        num_added = self.tokenizer.add_tokens(tokens, special_tokens=False)
+        if num_added > 0:
             self.model.resize_token_embeddings(len(self.tokenizer))
 
         self.collate_fn = DataCollatorForSeq2Seq(
