@@ -14,12 +14,12 @@ class F1Score(Metric):
         self.add_state("fn", default=torch.tensor(0), dist_reduce_fx="sum")
 
     def update(self, preds: list[str], target: list[str]):
-        for pred, target in zip(preds, target):
+        for pred, tgt in zip(preds, target):
             pred = set(pred)
-            target = set(target)
-            self.tp += len(pred & target)
-            self.fp += len(pred - target)
-            self.fn += len(target - pred)
+            tgt = set(tgt)
+            self.tp += len(pred & tgt)
+            self.fp += len(pred - tgt)
+            self.fn += len(tgt - pred)
 
     def compute(self):
         denominator = 2 * self.tp + self.fp + self.fn

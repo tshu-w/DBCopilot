@@ -116,6 +116,8 @@ class Seq2SeqModel(pl.LightningModule):
     def validation_step(self, batch, batch_idx: int) -> Optional[STEP_OUTPUT]:
         loss = self.common_step(batch)
         self.log("val/loss", loss, prog_bar=True)
+
+        batch.pop("decoder_input_ids", None)
         outputs = self.model.generate(**batch, **self.hparams.generator_config)
         pred_schemas = [
             str2schema(s, self.hparams.delimiters)
@@ -136,6 +138,8 @@ class Seq2SeqModel(pl.LightningModule):
     def test_step(self, batch, batch_idx: int) -> Optional[STEP_OUTPUT]:
         loss = self.common_step(batch)
         self.log("test/loss", loss, prog_bar=True)
+
+        batch.pop("decoder_input_ids", None)
         outputs = self.model.generate(**batch, **self.hparams.generator_config)
         pred_schemas = [
             str2schema(s, self.hparams.delimiters)
@@ -154,18 +158,19 @@ class Seq2SeqModel(pl.LightningModule):
         return loss
 
     def update_metrics(
-        self, schemas: list[dict], target_schemas: list[dict], step: str
+        self, pred_schemas: list[dict], target_schemas: list[dict], step: str
     ):
-        pred_databases = [[d for d in s] for s in schemas]
+        pred_databases = [[d for d in s] for s in pred_schemas]
         target_databases = [[d for d in s] for s in target_schemas]
         self.metrics[step][f"{step}/database_f1"](pred_databases, target_databases)
 
-        pred_tables = [[f"{d}.{t}" for d in s for t in s[d]] for s in schemas]
+        pred_tables = [[f"{d}.{t}" for d in s for t in s[d]] for s in pred_schemas]
         target_tables = [[f"{d}.{t}" for d in s for t in s[d]] for s in target_schemas]
         self.metrics[step][f"{step}/table_f1"](pred_tables, target_tables)
 
         pred_columns = [
-            [f"{d}.{t}.{c}" for d in s for t in s[d] for c in s[d][t]] for s in schemas
+            [f"{d}.{t}.{c}" for d in s for t in s[d] for c in s[d][t]]
+            for s in pred_schemas
         ]
         target_columns = [
             [f"{d}.{t}.{c}" for d in s for t in s[d] for c in s[d][t]]
