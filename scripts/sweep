@@ -1,0 +1,4 @@
+#!/bin/bash
+cd "$(dirname $(dirname "$0"))"
+
+python -m src.utils.sweep_cli "$@"

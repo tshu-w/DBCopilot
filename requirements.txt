@@ -3,6 +3,7 @@ torch >= 2.0.0
 lightning >= 2.0.0
 torchvision
 jsonargparse[signatures] # for CLI
+ray[tune]
 
 transformers
 scikit-learn

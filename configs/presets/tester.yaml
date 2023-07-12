@@ -1,2 +1,3 @@
 trainer:
   fast_dev_run: 5
+  logger: false
