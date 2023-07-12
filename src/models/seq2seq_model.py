@@ -76,11 +76,13 @@ class Seq2SeqModel(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
 
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            model_name_or_path, verbose=False
+        )
         self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name_or_path)
 
         num_added = self.tokenizer.add_tokens(
-            list(delimiters.values()), special_tokens=False
+            list(delimiters.values()), special_tokens=True
         )
         if num_added > 0:
             self.model.resize_token_embeddings(len(self.tokenizer))
@@ -114,46 +116,64 @@ class Seq2SeqModel(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx: int) -> Optional[STEP_OUTPUT]:
-        loss = self.common_step(batch)
-        self.log("val/loss", loss, prog_bar=True)
-
         batch.pop("decoder_input_ids", None)
+
         outputs = self.model.generate(**batch, **self.hparams.generator_config)
-        pred_schemas = [
-            str2schema(s, self.hparams.delimiters)
-            for s in self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
+        pred_texts = [
+            self.postprocess_text(s)
+            for s in self.tokenizer.batch_decode(
+                outputs, skip_special_tokens=False, clean_up_tokenization_spaces=False
+            )
         ]
+        pred_schemas = [str2schema(s, self.hparams.delimiters) for s in pred_texts]
+
         labels = torch.where(
             batch["labels"] != -100, batch["labels"], self.tokenizer.pad_token_id
         )
-        target_schemas = [
-            str2schema(s, self.hparams.delimiters)
-            for s in self.tokenizer.batch_decode(labels, skip_special_tokens=True)
+        target_texts = [
+            self.postprocess_text(s)
+            for s in self.tokenizer.batch_decode(
+                labels, skip_special_tokens=False, clean_up_tokenization_spaces=False
+            )
         ]
+        target_schemas = [str2schema(s, self.hparams.delimiters) for s in target_texts]
+
         self.update_metrics(pred_schemas, target_schemas, step="val")
         self.log_dict(self.metrics["val"], prog_bar=True)
+
+        loss = self.common_step(batch)
+        self.log("val/loss", loss, prog_bar=True)
 
         return loss
 
     def test_step(self, batch, batch_idx: int) -> Optional[STEP_OUTPUT]:
-        loss = self.common_step(batch)
-        self.log("test/loss", loss, prog_bar=True)
-
         batch.pop("decoder_input_ids", None)
+
         outputs = self.model.generate(**batch, **self.hparams.generator_config)
-        pred_schemas = [
-            str2schema(s, self.hparams.delimiters)
-            for s in self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
+        pred_texts = [
+            self.postprocess_text(s)
+            for s in self.tokenizer.batch_decode(
+                outputs, skip_special_tokens=False, clean_up_tokenization_spaces=False
+            )
         ]
+        pred_schemas = [str2schema(s, self.hparams.delimiters) for s in pred_texts]
+
         labels = torch.where(
             batch["labels"] != -100, batch["labels"], self.tokenizer.pad_token_id
         )
-        target_schemas = [
-            str2schema(s, self.hparams.delimiters)
-            for s in self.tokenizer.batch_decode(labels, skip_special_tokens=True)
+        target_texts = [
+            self.postprocess_text(s)
+            for s in self.tokenizer.batch_decode(
+                labels, skip_special_tokens=False, clean_up_tokenization_spaces=False
+            )
         ]
+        target_schemas = [str2schema(s, self.hparams.delimiters) for s in target_texts]
+
         self.update_metrics(pred_schemas, target_schemas, step="test")
         self.log_dict(self.metrics["test"], prog_bar=True)
+
+        loss = self.common_step(batch)
+        self.log("test/loss", loss, prog_bar=True)
 
         return loss
 
@@ -177,6 +197,13 @@ class Seq2SeqModel(pl.LightningModule):
             for s in target_schemas
         ]
         self.metrics[step][f"{step}/column_f1"](pred_columns, target_columns)
+
+    def postprocess_text(self, s: str) -> str:
+        for token in ["bos_token", "pad_token", "eos_token"]:
+            if getattr(self.tokenizer, token) is not None:
+                s = s.replace(getattr(self.tokenizer, token), "")
+
+        return s.strip()
 
     def configure_optimizers(self):
         no_decay = ["bias", "LayerNorm.weight"]
