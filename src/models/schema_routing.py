@@ -58,7 +58,7 @@ def prefix_allowed_tokens_fn(batch_id, sent, constraint_decoder):
     return constraint_decoder(sent.tolist())
 
 
-class Seq2SeqModel(pl.LightningModule):
+class SchemaRouting(pl.LightningModule):
     def __init__(
         self,
         model_name_or_path: str,

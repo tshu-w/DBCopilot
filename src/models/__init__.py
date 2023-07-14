@@ -1,3 +1,3 @@
-from .seq2seq_model import Seq2SeqModel
+from .schema_routing import SchemaRouting
 
-__all__ = ["Seq2SeqModel"]
+__all__ = ["SchemaRouting"]
