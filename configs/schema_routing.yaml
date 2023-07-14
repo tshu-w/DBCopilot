@@ -8,6 +8,7 @@ model:
     generator_config:
       max_new_tokens: 512
       num_beams: 1
+    constraint_decoding: true
     delimiters:
       initiator: "<(>"
       separator: "< >"

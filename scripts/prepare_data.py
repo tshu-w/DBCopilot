@@ -93,7 +93,7 @@ def spider(path=Path("./data/spider/")):
         for key in ["query_toks", "query_toks_no_value", "question_toks", "sql"]:
             record.pop(key, None)
 
-    with (path.parent / "train_spider.json").open("w") as f:
+    with (path.parent / "spider_train.json").open("w") as f:
         json.dump(train_data, f, indent=2)
 
     with (path / "dev.json").open() as f:
@@ -108,8 +108,11 @@ def spider(path=Path("./data/spider/")):
         for key in ["query_toks", "query_toks_no_value", "question_toks", "sql"]:
             record.pop(key, None)
 
-    with (path.parent / "dev_spider.json").open("w") as f:
+    with (path.parent / "spider_dev.json").open("w") as f:
         json.dump(dev_data, f, indent=2)
+
+    with (path.parent / "spider_schemas.json").open("w") as f:
+        json.dump(databases, f, indent=2)
 
 
 def bird(path=Path("./data/bird/")):
@@ -132,7 +135,7 @@ def bird(path=Path("./data/bird/")):
         except Exception:
             train_data.remove(record)
 
-    with (path.parent / "train_bird.json").open("w") as f:
+    with (path.parent / "bird_train.json").open("w") as f:
         json.dump(train_data, f, indent=2)
 
     with (path / "dev" / "dev.json").open() as f:
@@ -158,8 +161,11 @@ def bird(path=Path("./data/bird/")):
         except Exception:
             dev_data.remove(record)
 
-    with (path.parent / "dev_bird.json").open("w") as f:
+    with (path.parent / "bird_dev.json").open("w") as f:
         json.dump(dev_data, f, indent=2)
+
+    with (path.parent / "bird_schemas.json").open("w") as f:
+        json.dump(databases, f, indent=2)
 
 
 if __name__ == "__main__":

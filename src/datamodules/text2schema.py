@@ -1,6 +1,8 @@
+import json
 import os
 from functools import partial
-from typing import Optional
+from pathlib import Path
+from typing import Literal, Optional
 
 import lightning.pytorch as pl
 from datasets import load_dataset
@@ -45,10 +47,7 @@ def preprocess(batch, tokenizer, delimiters):
 class Text2Schema(pl.LightningDataModule):
     def __init__(
         self,
-        data_files: dict = {
-            "train": ["data/train_spider.json"],
-            "test": ["data/dev_spider.json"],
-        },
+        dataset: Literal["spider", "bird"] = "spider",
         *,
         preprocessing_num_workers: int = None,
         batch_size: int = 32,
@@ -57,7 +56,11 @@ class Text2Schema(pl.LightningDataModule):
     ):
         super().__init__()
         self.save_hyperparameters()
-        self.data_files = data_files
+        self.dataset = dataset
+        self.data_files = {
+            "train": [f"data/{dataset}_train.json"],
+            "test": [f"data/{dataset}_dev.json"],
+        }
 
     def prepare_data(self) -> None:
         # setup first to prevent datasets cache conflicts in multiple processes.
@@ -84,6 +87,10 @@ class Text2Schema(pl.LightningDataModule):
                 remove_columns=datasets["train"].column_names,
                 num_proc=self.hparams.preprocessing_num_workers,
             )
+
+        if not hasattr(self, "schemas"):
+            with Path(f"data/{self.dataset}_schemas.json").open("r") as f:
+                self.schemas = json.load(f)
 
         self.collate_fn = getattr(self.trainer.model, "collate_fn", None)
 

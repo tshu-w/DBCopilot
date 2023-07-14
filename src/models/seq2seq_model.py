@@ -1,3 +1,4 @@
+from functools import partial
 from typing import Optional
 
 import lightning.pytorch as pl
@@ -10,7 +11,7 @@ from transformers import (
     get_scheduler,
 )
 
-from .modules import F1Score
+from .modules import ConstraintDecoder, F1Score
 
 
 def str2schema(s: str, delimiters: dict) -> dict:
@@ -53,6 +54,10 @@ def str2schema(s: str, delimiters: dict) -> dict:
         return {}
 
 
+def prefix_allowed_tokens_fn(batch_id, sent, constraint_decoder):
+    return constraint_decoder(sent.tolist())
+
+
 class Seq2SeqModel(pl.LightningModule):
     def __init__(
         self,
@@ -60,9 +65,9 @@ class Seq2SeqModel(pl.LightningModule):
         generator_config: dict = {
             "max_new_tokens": 512,
             "num_beams": 1,
-            "prefix_allowed_tokens_fn": None,
         },
-        delimiters: dict = {
+        constraint_decoding: bool = True,
+        delimiters: dict[str, str] = {
             "initiator": "<(>",
             "separator": "< >",
             "terminator": "<)>",
@@ -80,6 +85,7 @@ class Seq2SeqModel(pl.LightningModule):
             model_name_or_path, verbose=False
         )
         self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name_or_path)
+        self.generator_config = generator_config
 
         num_added = self.tokenizer.add_tokens(
             list(delimiters.values()), special_tokens=True
@@ -101,6 +107,24 @@ class Seq2SeqModel(pl.LightningModule):
                 }
             )
 
+    def setup(self, stage: str) -> None:
+        # prepare prefix_allowed_tokens_fn for constraint decoding
+        if (
+            self.hparams.constraint_decoding
+            and self.generator_config.get("prefix_allowed_tokens_fn", None) is None
+        ):
+            constraint_decoder = ConstraintDecoder(
+                tokenizer=self.tokenizer,
+                delimiters=self.hparams.delimiters,
+                schemas=self.trainer.datamodule.schemas,
+            )
+            partial_prefix_allowed_tokens_fn = partial(
+                prefix_allowed_tokens_fn, constraint_decoder=constraint_decoder
+            )
+            self.generator_config[
+                "prefix_allowed_tokens_fn"
+            ] = partial_prefix_allowed_tokens_fn
+
     def forward(self, **inputs):
         return self.model(**inputs)
 
@@ -115,10 +139,10 @@ class Seq2SeqModel(pl.LightningModule):
 
         return loss
 
-    def validation_step(self, batch, batch_idx: int) -> Optional[STEP_OUTPUT]:
+    def evaluation_step(self, batch, step: str) -> Optional[STEP_OUTPUT]:
         batch.pop("decoder_input_ids", None)
 
-        outputs = self.model.generate(**batch, **self.hparams.generator_config)
+        outputs = self.model.generate(**batch, **self.generator_config)
         pred_texts = [
             self.postprocess_text(s)
             for s in self.tokenizer.batch_decode(
@@ -138,44 +162,19 @@ class Seq2SeqModel(pl.LightningModule):
         ]
         target_schemas = [str2schema(s, self.hparams.delimiters) for s in target_texts]
 
-        self.update_metrics(pred_schemas, target_schemas, step="val")
-        self.log_dict(self.metrics["val"], prog_bar=True)
+        self.update_metrics(pred_schemas, target_schemas, step=step)
+        self.log_dict(self.metrics[step], prog_bar=True)
 
         loss = self.common_step(batch)
-        self.log("val/loss", loss, prog_bar=True)
+        self.log(f"{step}/loss", loss, prog_bar=True)
 
         return loss
+
+    def validation_step(self, batch, batch_idx: int) -> Optional[STEP_OUTPUT]:
+        return self.evaluation_step(batch, step="val")
 
     def test_step(self, batch, batch_idx: int) -> Optional[STEP_OUTPUT]:
-        batch.pop("decoder_input_ids", None)
-
-        outputs = self.model.generate(**batch, **self.hparams.generator_config)
-        pred_texts = [
-            self.postprocess_text(s)
-            for s in self.tokenizer.batch_decode(
-                outputs, skip_special_tokens=False, clean_up_tokenization_spaces=False
-            )
-        ]
-        pred_schemas = [str2schema(s, self.hparams.delimiters) for s in pred_texts]
-
-        labels = torch.where(
-            batch["labels"] != -100, batch["labels"], self.tokenizer.pad_token_id
-        )
-        target_texts = [
-            self.postprocess_text(s)
-            for s in self.tokenizer.batch_decode(
-                labels, skip_special_tokens=False, clean_up_tokenization_spaces=False
-            )
-        ]
-        target_schemas = [str2schema(s, self.hparams.delimiters) for s in target_texts]
-
-        self.update_metrics(pred_schemas, target_schemas, step="test")
-        self.log_dict(self.metrics["test"], prog_bar=True)
-
-        loss = self.common_step(batch)
-        self.log("test/loss", loss, prog_bar=True)
-
-        return loss
+        return self.evaluation_step(batch, step="test")
 
     def update_metrics(
         self, pred_schemas: list[dict], target_schemas: list[dict], step: str
