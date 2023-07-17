@@ -21,11 +21,18 @@ def run_cli(config, debug: bool = True, command: str = "fit", devices: int = 1):
     os.chdir(os.environ["TUNE_ORIG_WORKING_DIR"])
 
     argv = ["./run", command]
-    argv.extend(["--config", config.pop("config")])
-
-    data_config = config.pop("data_config", None)
-    if data_config:
-        argv.extend(["--config", data_config])
+    ckpt_path = config.pop("ckpt_path")
+    if ckpt_path is not None:
+        config_path = Path(ckpt_path).parents[1] / "config.yaml"
+        argv.extend(["--config", str(config_path)])
+        argv.extend(["--ckpt_path", ckpt_path or "null"])
+        config.pop("config", None)
+        config.pop("data_config", None)
+    else:
+        argv.extend(["--config", config.pop("config")])
+        data_config = config.pop("data_config", None)
+        if data_config:
+            argv.extend(["--config", data_config])
 
     argv.extend(
         itertools.chain(*[[f"--{k}", json.dumps(v)] for k, v in config.items()])
@@ -52,11 +59,13 @@ def sweep(
     debug: bool = False,
     gpus_per_trial: Union[int, float] = 1,
     *,
+    ckpt_paths: list[Optional[str]] = [None],
     configs: list[str] = ["configs/mnist.yaml"],
     data_configs: list[Optional[str]] = [None],
     override_kwargs: dict[str, Any] = {},
 ):
     param_space = {
+        "ckpt_path": tune.grid_search(ckpt_paths),
         "config": tune.grid_search(configs),
         "data_config": tune.grid_search(data_configs),
         **{

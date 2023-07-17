@@ -16,12 +16,13 @@ class LitCLI(LightningCLI):
     def before_instantiate_classes(self) -> None:
         config = self.config[self.subcommand]
 
+        default_root_dir = config.trainer.default_root_dir
         logger = config.trainer.logger
         if logger and logger is not True:
             loggers = logger if isinstance(logger, Iterable) else [logger]
             for logger in loggers:
                 logger.init_args.save_dir = os.path.join(
-                    logger.init_args.get("save_dir", "results"), self.subcommand
+                    default_root_dir, self.subcommand
                 )
 
 
