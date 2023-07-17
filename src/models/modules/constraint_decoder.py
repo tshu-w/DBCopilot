@@ -139,11 +139,6 @@ class ConstraintDecoder:
                 key = f"{database}.{tables[-1]}"
                 ids = sent[left + 1 : right]
                 column = self.tries["column"][key].search(ids)
-                if column is None:
-                    print(self.tokenizer.decode(sent))
-                    print(self.tokenizer.decode(sent[left + 1 : right]))
-                    print(key)
-                    print(column)
                 assert column is not None
                 columns.append(column)
 
