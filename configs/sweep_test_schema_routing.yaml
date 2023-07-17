@@ -1,0 +1,15 @@
+test:
+  debug: false
+  gpus_per_trial: 1
+  ckpt_paths:
+    - "results/fit/resilient-flower-80/3ah8arsz/checkpoints/epoch=9-step=2440.ckpt"
+    - "results/fit/polished-plant-79/uivbzbmn/checkpoints/epoch=9-step=2660.ckpt"
+  override_kwargs:
+    model.generator_config:
+      - max_new_tokens: 512
+        constraint_decoding: true
+      - max_new_tokens: 512
+        num_beams: 10
+        num_return_sequences: 10
+    data.batch_size:
+      - 16

@@ -1,0 +1,14 @@
+fit:
+  debug: false
+  gpus_per_trial: 1
+  configs:
+    - configs/schema_routing.yaml
+  data_configs:
+    - configs/spider.yaml
+    - configs/bird.yaml
+  override_kwargs:
+    seed_everything:
+      - 123
+      # - 42
+    model.learning_rate:
+      - 2.0e-05

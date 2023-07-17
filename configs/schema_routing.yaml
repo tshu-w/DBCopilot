@@ -6,9 +6,7 @@ model:
   init_args:
     model_name_or_path: ./models/t5-base
     generator_config:
-      max_new_tokens: 256
-      num_beams: 5
-      num_return_sequences: 5
+      max_new_tokens: 512
       constraint_decoding: false
     delimiters:
       initiator: "<(>"
