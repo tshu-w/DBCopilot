@@ -179,12 +179,24 @@ class SchemaRouting(pl.LightningModule):
     def update_metrics(
         self, pred_schemas: list[dict], target_schemas: list[dict], step: str
     ):
+        def merge_nested_list(
+            nested_lst: list[list[str]], step: int
+        ) -> list[list[str]]:
+            merged = []
+            for i in range(0, len(nested_lst), step):
+                merged.append([it for lst in nested_lst[i : i + step] for it in lst])
+            return merged
+
+        merge_step = len(pred_schemas) // len(target_schemas)
+
         pred_databases = [[d for d in s] for s in pred_schemas]
         target_databases = [[d for d in s] for s in target_schemas]
+        pred_databases = merge_nested_list(pred_databases, step=merge_step)
         self.metrics[step][f"{step}/database_f1"](pred_databases, target_databases)
 
         pred_tables = [[f"{d}.{t}" for d in s for t in s[d]] for s in pred_schemas]
         target_tables = [[f"{d}.{t}" for d in s for t in s[d]] for s in target_schemas]
+        pred_tables = merge_nested_list(pred_tables, step=merge_step)
         self.metrics[step][f"{step}/table_f1"](pred_tables, target_tables)
 
         pred_columns = [
@@ -195,6 +207,7 @@ class SchemaRouting(pl.LightningModule):
             [f"{d}.{t}.{c}" for d in s for t in s[d] for c in s[d][t]]
             for s in target_schemas
         ]
+        pred_columns = merge_nested_list(pred_columns, step=merge_step)
         self.metrics[step][f"{step}/column_f1"](pred_columns, target_columns)
 
     def postprocess_text(self, s: str) -> str:
