@@ -64,9 +64,8 @@ class SchemaRouting(pl.LightningModule):
         model_name_or_path: str,
         generator_config: dict = {
             "max_new_tokens": 512,
-            "num_beams": 1,
+            "constraint_decoding": True,
         },
-        constraint_decoding: bool = True,
         delimiters: dict[str, str] = {
             "initiator": "<(>",
             "separator": "< >",
@@ -109,8 +108,9 @@ class SchemaRouting(pl.LightningModule):
 
     def setup(self, stage: str) -> None:
         # prepare prefix_allowed_tokens_fn for constraint decoding
+        constraint_decoding = self.generator_config.pop("constraint_decoding", False)
         if (
-            self.hparams.constraint_decoding
+            constraint_decoding
             and self.generator_config.get("prefix_allowed_tokens_fn", None) is None
         ):
             constraint_decoder = ConstraintDecoder(
