@@ -11,7 +11,7 @@ from transformers import (
     get_scheduler,
 )
 
-from .modules import ConstraintDecoder, F1Score
+from .modules import ConstraintDecoder, Recall
 
 
 def str2schema(s: str, delimiters: dict) -> dict:
@@ -101,9 +101,9 @@ class SchemaRouting(pl.LightningModule):
         for step in ["val", "test"]:
             self.metrics[step] = torch.nn.ModuleDict(
                 {
-                    f"{step}/database_f1": F1Score(),
-                    f"{step}/table_f1": F1Score(),
-                    f"{step}/column_f1": F1Score(),
+                    f"{step}/dR": Recall(),
+                    f"{step}/tR": Recall(),
+                    f"{step}/cR": Recall(),
                 }
             )
 
@@ -192,12 +192,12 @@ class SchemaRouting(pl.LightningModule):
         pred_databases = [[d for d in s] for s in pred_schemas]
         target_databases = [[d for d in s] for s in target_schemas]
         pred_databases = merge_nested_list(pred_databases, step=merge_step)
-        self.metrics[step][f"{step}/database_f1"](pred_databases, target_databases)
+        self.metrics[step][f"{step}/dR"](pred_databases, target_databases)
 
         pred_tables = [[f"{d}.{t}" for d in s for t in s[d]] for s in pred_schemas]
         target_tables = [[f"{d}.{t}" for d in s for t in s[d]] for s in target_schemas]
         pred_tables = merge_nested_list(pred_tables, step=merge_step)
-        self.metrics[step][f"{step}/table_f1"](pred_tables, target_tables)
+        self.metrics[step][f"{step}/tR"](pred_tables, target_tables)
 
         pred_columns = [
             [f"{d}.{t}.{c}" for d in s for t in s[d] for c in s[d][t]]
@@ -208,7 +208,7 @@ class SchemaRouting(pl.LightningModule):
             for s in target_schemas
         ]
         pred_columns = merge_nested_list(pred_columns, step=merge_step)
-        self.metrics[step][f"{step}/column_f1"](pred_columns, target_columns)
+        self.metrics[step][f"{step}/cR"](pred_columns, target_columns)
 
     def postprocess_text(self, s: str) -> str:
         for token in ["bos_token", "pad_token", "eos_token"]:
