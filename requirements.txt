@@ -1,6 +1,7 @@
 --find-links https://download.pytorch.org/whl/cu113/torch_stable.html
 torch >= 2.0.0
 lightning >= 2.0.0
+torchmetrics
 torchvision
 jsonargparse[signatures] # for CLI
 ray[tune]
