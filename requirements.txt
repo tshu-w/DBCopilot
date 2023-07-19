@@ -12,6 +12,7 @@ evaluate
 
 guidance
 pandas
+retriv
 sqlparse
 nltk
 sqlglot
