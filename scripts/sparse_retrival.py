@@ -25,15 +25,20 @@ def retrieve_schemas(
         schemas.items(),
         callback=preprocess_schema,
     )
-    with Path(f"data/{dataset}_dev.json").open() as f:
-        dev = json.load(f)
 
-    queries = [{"id": str(i), "text": it["question"]} for i, it in enumerate(dev)]
-    qrels_dict = {str(i): {it["schema"]["database"]: 1} for i, it in enumerate(dev)}
-    results = retriever.bsearch(queries)
-    qrels = Qrels(qrels_dict)
-    run = Run(results)
-    print(evaluate(qrels, run, metrics=["recall@1", "recall@5", "recall@10"]))
+    for path in Path("data").glob(f"{dataset}_test*.json"):
+        with path.open() as f:
+            dev = json.load(f)
+
+        queries = [{"id": str(i), "text": it["question"]} for i, it in enumerate(dev)]
+        qrels_dict = {str(i): {it["schema"]["database"]: 1} for i, it in enumerate(dev)}
+        results = retriever.bsearch(queries)
+        qrels = Qrels(qrels_dict)
+        run = Run(results)
+        print(
+            path.stem,
+            evaluate(qrels, run, metrics=["recall@1", "recall@5", "recall@10"]),
+        )
 
 
 if __name__ == "__main__":

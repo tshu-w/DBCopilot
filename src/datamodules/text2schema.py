@@ -58,8 +58,13 @@ class Text2Schema(pl.LightningDataModule):
         self.save_hyperparameters()
         self.dataset = dataset
         self.data_files = {
-            "train": [f"data/{dataset}_train.json"],
-            "test": [f"data/{dataset}_dev.json"],
+            "train": list(
+                map(str, sorted(Path("data").glob(f"{dataset}_train*.json")))
+            ),
+            **{
+                f.stem[: len(dataset)]: [str(f)]
+                for f in sorted(Path("data").glob(f"{dataset}_test*.json"))
+            },
         }
 
     def prepare_data(self) -> None:
@@ -87,6 +92,8 @@ class Text2Schema(pl.LightningDataModule):
                 remove_columns=datasets["train"].column_names,
                 num_proc=self.hparams.preprocessing_num_workers,
             )
+
+            self.test_splits = [x for x in self.datasets.keys() if "test" in x]
 
         if not hasattr(self, "schemas"):
             with Path(f"data/{self.dataset}_schemas.json").open("r") as f:
@@ -116,11 +123,17 @@ class Text2Schema(pl.LightningDataModule):
         )
 
     def test_dataloader(self) -> EVAL_DATALOADERS:
-        return DataLoader(
-            dataset=self.datasets["test"],
-            batch_size=self.hparams.batch_size,
-            num_workers=self.hparams.num_workers,
-            pin_memory=self.hparams.pin_memory,
-            collate_fn=self.collate_fn,
-            persistent_workers=self.hparams.num_workers > 0,
-        )
+        test_dataloaders = [
+            DataLoader(
+                dataset=self.datasets[x],
+                batch_size=self.hparams.batch_size,
+                num_workers=self.hparams.num_workers,
+                pin_memory=self.hparams.pin_memory,
+                collate_fn=self.collate_fn,
+                persistent_workers=self.hparams.num_workers > 0,
+                shuffle=False,
+            )
+            for x in self.test_splits
+        ]
+
+        return test_dataloaders[0] if len(test_dataloaders) == 1 else test_dataloaders

@@ -108,11 +108,62 @@ def spider(path=Path("./data/spider/")):
         for key in ["query_toks", "query_toks_no_value", "question_toks", "sql"]:
             record.pop(key, None)
 
-    with (path.parent / "spider_dev.json").open("w") as f:
+    with (path.parent / "spider_test.json").open("w") as f:
         json.dump(dev_data, f, indent=2)
 
     with (path.parent / "spider_schemas.json").open("w") as f:
         json.dump(databases, f, indent=2)
+
+
+def spider_variants():
+    databases = get_databases_info("spider")
+
+    with Path("./data/spider-syn/train_spider.json").open() as f:
+        train_data = json.load(f)
+
+    for record in tqdm(train_data):
+        metadata = extract_metadata(record["query"], databases[record["db_id"]])
+        record["schema"] = {
+            "database": record.pop("db_id"),
+            "metadata": metadata,
+        }
+        record["question"] = record.pop("SpiderSynQuestion")
+        for key in ["SpiderQuestion"]:
+            record.pop(key, None)
+
+    with Path("./data/spider_train_syn.json").open("w") as f:
+        json.dump(train_data, f, indent=2)
+
+    with Path("./data/spider-syn/dev.json").open() as f:
+        dev_data = json.load(f)
+
+    for record in tqdm(dev_data):
+        metadata = extract_metadata(record["query"], databases[record["db_id"]])
+        record["schema"] = {
+            "database": record.pop("db_id"),
+            "metadata": metadata,
+        }
+        record["question"] = record.pop("SpiderSynQuestion")
+        for key in ["SpiderQuestion"]:
+            record.pop(key, None)
+
+    with Path("./data/spider_test_syn.json").open("w") as f:
+        json.dump(dev_data, f, indent=2)
+
+    with Path("data/spider-realistic/spider-realistic.json").open() as f:
+        dev_data = json.load(f)
+
+    for record in tqdm(dev_data):
+        metadata = extract_metadata(record["query"], databases[record["db_id"]])
+        record["schema"] = {
+            "database": record.pop("db_id"),
+            "metadata": metadata,
+        }
+        for key in ["query_toks", "query_toks_no_value", "question_toks", "sql"]:
+            record.pop(key, None)
+
+    with Path("./data/spider_test_realistic.json").open("w") as f:
+        json.dump(dev_data, f, indent=2)
 
 
 def bird(path=Path("./data/bird/")):
@@ -161,7 +212,7 @@ def bird(path=Path("./data/bird/")):
         except Exception:
             dev_data.remove(record)
 
-    with (path.parent / "bird_dev.json").open("w") as f:
+    with (path.parent / "bird_test.json").open("w") as f:
         json.dump(dev_data, f, indent=2)
 
     with (path.parent / "bird_schemas.json").open("w") as f:
@@ -170,4 +221,5 @@ def bird(path=Path("./data/bird/")):
 
 if __name__ == "__main__":
     spider()
+    spider_variants()
     bird()
