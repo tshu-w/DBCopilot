@@ -5,20 +5,21 @@ from pathlib import Path
 from typing import Literal, Optional
 
 import lightning.pytorch as pl
-from datasets import load_dataset
+import pandas as pd
+from datasets import Dataset, concatenate_datasets, load_dataset
 from lightning.pytorch.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
 from torch.utils.data import DataLoader
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
-def preprocess(batch, tokenizer, delimiters):
+def preprocess(batch, tokenizer, delimiters, max_length):
     initiator = delimiters["initiator"]
     separator = delimiters["separator"]
     terminator = delimiters["terminator"]
 
-    targets = []
-    for schema in batch["schema"]:
+    inputs, targets = [], []
+    for question, schema in zip(batch["question"], batch["schema"]):
         for token in delimiters.values():
             assert token not in schema["database"]
             assert all(token not in t["name"] for t in schema["metadata"])
@@ -32,11 +33,20 @@ def preprocess(batch, tokenizer, delimiters):
             f"{initiator}{t['name']}{separator}{separator.join(t['columns'])}{terminator}"
             for t in schema["metadata"]
         )
-        targets.append(
-            f"{initiator}{schema['database']}{separator}{tables}{terminator}"
-        )
+        target = f"{initiator}{schema['database']}{separator}{tables}{terminator}"
+        targets.append(target)
 
-    features = tokenizer(text=batch["question"], text_target=targets)
+        if question is None:
+            inputs.append("")
+        else:
+            inputs.append(question)
+
+    features = tokenizer(
+        text=inputs,
+        text_target=targets,
+        max_length=max_length,
+        truncation=True,
+    )
 
     for i, label in enumerate(features["labels"]):
         assert tokenizer.unk_token_id not in label
@@ -62,7 +72,7 @@ class Text2Schema(pl.LightningDataModule):
                 map(str, sorted(Path("data").glob(f"{dataset}_train*.json")))
             ),
             **{
-                f.stem[: len(dataset)]: [str(f)]
+                f.stem[len(dataset) :]: [str(f)]
                 for f in sorted(Path("data").glob(f"{dataset}_test*.json"))
             },
         }
@@ -74,6 +84,17 @@ class Text2Schema(pl.LightningDataModule):
     def setup(self, stage: Optional[str] = None) -> None:
         if not hasattr(self, "datasets"):
             datasets = load_dataset("json", data_files=self.data_files)
+
+            with Path(f"data/{self.dataset}_schemas.json").open("r") as f:
+                self.schemas = json.load(f)
+
+            list_of_schemas = [
+                {"schema": {"database": k, "metadata": v}}
+                for k, v in self.schemas.items()
+            ]
+            schemas_ds = Dataset.from_pandas(pd.DataFrame(list_of_schemas))
+            datasets["train"] = concatenate_datasets([datasets["train"], schemas_ds])
+
             if "validation" not in datasets:
                 datasets_split = datasets["train"].train_test_split(
                     test_size=0.1, shuffle=True
@@ -85,19 +106,17 @@ class Text2Schema(pl.LightningDataModule):
                 preprocess,
                 tokenizer=self.trainer.model.tokenizer,
                 delimiters=self.trainer.model.hparams.delimiters,
+                max_length=self.trainer.model.hparams.max_length,
             )
             self.datasets = datasets.map(
                 _preprocess,
                 batched=True,
                 remove_columns=datasets["train"].column_names,
                 num_proc=self.hparams.preprocessing_num_workers,
+                load_from_cache_file=False,
             )
 
             self.test_splits = [x for x in self.datasets.keys() if "test" in x]
-
-        if not hasattr(self, "schemas"):
-            with Path(f"data/{self.dataset}_schemas.json").open("r") as f:
-                self.schemas = json.load(f)
 
         self.collate_fn = getattr(self.trainer.model, "collate_fn", None)
 

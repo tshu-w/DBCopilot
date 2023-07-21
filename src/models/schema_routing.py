@@ -72,6 +72,7 @@ class SchemaRouting(pl.LightningModule):
             "terminator": "<)>",
         },
         *,
+        max_length: int = 512,
         weight_decay: float = 0.0,
         learning_rate: float = 2e-5,
         scheduler_type: str = "linear",
@@ -163,17 +164,19 @@ class SchemaRouting(pl.LightningModule):
         target_schemas = [str2schema(s, self.hparams.delimiters) for s in target_texts]
 
         self.update_metrics(pred_schemas, target_schemas, step=step)
-        self.log_dict(self.metrics[step], prog_bar=True)
+        self.log_dict(self.metrics[step], prog_bar=True, add_dataloader_idx=True)
 
         loss = self.common_step(batch)
-        self.log(f"{step}/loss", loss, prog_bar=True)
+        self.log(f"{step}/loss", loss, prog_bar=True, add_dataloader_idx=True)
 
         return loss
 
     def validation_step(self, batch, batch_idx: int) -> Optional[STEP_OUTPUT]:
         return self.evaluation_step(batch, step="val")
 
-    def test_step(self, batch, batch_idx: int) -> Optional[STEP_OUTPUT]:
+    def test_step(
+        self, batch, batch_idx: int, dataloader_idx: int = 0
+    ) -> Optional[STEP_OUTPUT]:
         return self.evaluation_step(batch, step="test")
 
     def update_metrics(
