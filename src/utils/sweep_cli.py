@@ -13,8 +13,9 @@ from ray import air, tune
 
 from src.utils.lit_cli import lit_cli
 
-os.environ["PL_DISABLE_FORK"] = "1"
-ray.init(_temp_dir=str(Path.home() / ".cache" / "ray"))
+ray.init(
+    _temp_dir=str(Path.home() / ".cache" / "ray"), num_cpus=min(os.cpu_count(), 32)
+)
 
 
 def run_cli(config, debug: bool = True, command: str = "fit", devices: int = 1):
