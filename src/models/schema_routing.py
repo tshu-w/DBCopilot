@@ -55,7 +55,11 @@ def str2schema(s: str, delimiters: dict) -> dict:
 
 
 def prefix_allowed_tokens_fn(batch_id, sent, constraint_decoder):
-    return constraint_decoder(sent.tolist())
+    try:
+        allowed_tokens = constraint_decoder(sent.tolist())
+    except Exception:
+        allowed_tokens = [constraint_decoder.tokenizer.eos_token_id]
+    return allowed_tokens
 
 
 class SchemaRouting(pl.LightningModule):
@@ -164,10 +168,10 @@ class SchemaRouting(pl.LightningModule):
         target_schemas = [str2schema(s, self.hparams.delimiters) for s in target_texts]
 
         self.update_metrics(pred_schemas, target_schemas, step=step)
-        self.log_dict(self.metrics[step], prog_bar=True, add_dataloader_idx=True)
+        self.log_dict(self.metrics[step], prog_bar=True)
 
         loss = self.common_step(batch)
-        self.log(f"{step}/loss", loss, prog_bar=True, add_dataloader_idx=True)
+        self.log(f"{step}/loss", loss, prog_bar=True)
 
         return loss
 

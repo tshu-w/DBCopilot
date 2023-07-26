@@ -1,13 +1,18 @@
 seed_everything: 123
 trainer:
-  max_epochs: 10
+  max_epochs: 50
+  # precision: "16-mixed"
 model:
   class_path: src.models.SchemaRouting
   init_args:
     model_name_or_path: ./models/t5-base
     generator_config:
       max_new_tokens: 512
-      constraint_decoding: false
+      num_beams: 10
+      num_beam_groups: 10
+      diversity_penalty: 1.0
+      num_return_sequences: 10
+      constraint_decoding: true
     delimiters:
       initiator: "<(>"
       separator: "< >"
