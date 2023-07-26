@@ -10,30 +10,15 @@ from datasets import Dataset, concatenate_datasets, load_dataset
 from lightning.pytorch.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
 from torch.utils.data import DataLoader
 
+from src.utils.helpers import schema2str
+
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 def preprocess(batch, tokenizer, delimiters, max_length):
-    initiator = delimiters["initiator"]
-    separator = delimiters["separator"]
-    terminator = delimiters["terminator"]
-
     inputs, targets = [], []
     for question, schema in zip(batch["question"], batch["schema"]):
-        for token in delimiters.values():
-            assert token not in schema["database"]
-            assert all(token not in t["name"] for t in schema["metadata"])
-            assert all(
-                token not in column
-                for t in schema["metadata"]
-                for column in t["columns"]
-            )
-
-        tables = separator.join(
-            f"{initiator}{t['name']}{separator}{separator.join(t['columns'])}{terminator}"
-            for t in schema["metadata"]
-        )
-        target = f"{initiator}{schema['database']}{separator}{tables}{terminator}"
+        target = schema2str(schema, delimiters)
         targets.append(target)
 
         if question is None:

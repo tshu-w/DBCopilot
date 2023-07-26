@@ -11,47 +11,8 @@ from transformers import (
     get_scheduler,
 )
 
-from .modules import ConstraintDecoder, Recall
-
-
-def str2schema(s: str, delimiters: dict) -> dict:
-    """
-    Converts string representation of a database schema into nested dictionary.
-
-    Input: '(<database_name> (<table_name_1> <column_name_1> <column_name_2>) (<table_name_2> <column_name_1> <column_name_2> <column_name_3>) (<table_name_3> <column_name_1>))'
-
-    Output: {
-        "<database_name>": {
-            "<table_name_1>": ["<column_name_1>", "<column_name_2>"],
-            "<table_name_2>": ["<column_name_1>", "<column_name_2>", "<column_name_3>"],
-            "<table_name_3>": ["<column_name_1>"]
-        }
-    }
-    """
-
-    initiator = delimiters["initiator"]
-    separator = delimiters["separator"]
-    terminator = delimiters["terminator"]
-    try:
-        # Remove space after delimiters for t5,
-        # see https://github.com/huggingface/transformers/issues/24743
-        for token in delimiters.values():
-            s = s.replace(f"{token} ", f"{token}")
-
-        schema = {}
-        trimmed_str = s[len(initiator) : -len(terminator)]
-        database, tables = trimmed_str.split(separator, 1)
-        tables = tables[len(initiator) : -len(terminator)]
-        tables = tables.split(f"{terminator}{separator}{initiator}")
-        schema[database] = {}
-        for table in tables:
-            table_name, *columns = table.split(separator)
-            schema[database][table_name] = columns
-
-        return schema
-
-    except Exception:
-        return {}
+from src.models.modules import ConstraintDecoder, Recall
+from src.utils.helpers import str2schema
 
 
 def prefix_allowed_tokens_fn(batch_id, sent, constraint_decoder):
