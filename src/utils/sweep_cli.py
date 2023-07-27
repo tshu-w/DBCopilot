@@ -36,7 +36,12 @@ def run_cli(config, debug: bool = True, command: str = "fit", devices: int = 1):
             argv.extend(["--config", data_config])
 
     argv.extend(
-        itertools.chain(*[[f"--{k}", json.dumps(v)] for k, v in config.items()])
+        itertools.chain(
+            *[
+                [f"--{k}", v if isinstance(v, str) else json.dumps(v)]
+                for k, v in config.items()
+            ]
+        )
     )
 
     argv.extend(["--trainer.devices", str(devices)])
