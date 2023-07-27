@@ -5,8 +5,7 @@ from pathlib import Path
 from typing import Literal, Optional
 
 import lightning.pytorch as pl
-import pandas as pd
-from datasets import Dataset, concatenate_datasets, load_dataset
+from datasets import load_dataset
 from lightning.pytorch.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
 from torch.utils.data import DataLoader
 
@@ -17,33 +16,27 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 def preprocess(batch, tokenizer, delimiters, max_length):
     inputs, targets = [], []
-    for question, schema in zip(batch["question"], batch["schema"]):
-        target = schema2str(schema, delimiters)
-        targets.append(target)
+    for schema in batch["schema"]:
+        inputs.append(schema2str(schema, delimiters))
 
-        if question is None:
-            inputs.append("")
-        else:
-            inputs.append(question)
+    if "question" in batch:
+        for question in batch["question"]:
+            targets.append(question)
 
     features = tokenizer(
         text=inputs,
-        text_target=targets,
+        text_target=targets or None,
         max_length=max_length,
         truncation=True,
     )
 
-    for i, label in enumerate(features["labels"]):
-        assert tokenizer.unk_token_id not in label
-
     return features
 
 
-class Text2Schema(pl.LightningDataModule):
+class Schema2Text(pl.LightningDataModule):
     def __init__(
         self,
         dataset: Literal["spider", "bird"] = "spider",
-        add_pseudo: bool = False,
         *,
         preprocessing_num_workers: int = None,
         batch_size: int = 32,
@@ -62,8 +55,6 @@ class Text2Schema(pl.LightningDataModule):
                 for f in sorted(Path("data").glob(f"{dataset}_test*.json"))
             },
         }
-        if add_pseudo:
-            self.data_files["train"].append(f"data/{dataset}_pseudo.json")
 
     def prepare_data(self) -> None:
         # setup first to prevent datasets cache conflicts in multiple processes.
@@ -75,13 +66,6 @@ class Text2Schema(pl.LightningDataModule):
 
             with Path(f"data/{self.dataset}_schemas.json").open("r") as f:
                 self.schemas = json.load(f)
-
-            list_of_schemas = [
-                {"schema": {"database": k, "metadata": v}}
-                for k, v in self.schemas.items()
-            ]
-            schemas_ds = Dataset.from_pandas(pd.DataFrame(list_of_schemas))
-            datasets["train"] = concatenate_datasets([datasets["train"], schemas_ds])
 
             if "validation" not in datasets:
                 datasets_split = datasets["train"].train_test_split(

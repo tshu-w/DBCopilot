@@ -1,0 +1,18 @@
+seed_everything: 123
+trainer:
+  max_epochs: 50
+  # precision: "16-mixed"
+model:
+  class_path: src.models.Schema2Query
+  init_args:
+    model_name_or_path: ./models/t5-base
+    generator_config:
+      max_new_tokens: 512
+    delimiters:
+      initiator: "<(>"
+      separator: "< >"
+      terminator: "<)>"
+    weight_decay: 0.0
+    learning_rate: 2.0e-05
+    scheduler_type: linear
+    warmup_steps: 0

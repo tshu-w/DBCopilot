@@ -173,7 +173,7 @@ def bird(path=Path("./data/bird/")):
         train_data = json.load(f)
 
     for record in tqdm(train_data[:]):
-        db_id = record["db_id"] if record["db_id"] != "movies_4" else "movie_4"
+        db_id = record["db_id"]
         try:
             metadata = extract_metadata(record["SQL"], databases[db_id])
             record["schema"] = {
