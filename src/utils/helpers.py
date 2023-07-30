@@ -1,3 +1,13 @@
+from typing import Iterable, Iterator
+
+
+def chunks(lst: Iterable, n: int) -> Iterator[Iterable]:
+    """Yield successive n-sized chunks from lst."""
+    size = lst.shape[0] if hasattr(lst, "shape") else len(lst)
+    for i in range(0, size, n):
+        yield lst[i : i + n]
+
+
 def str2schema(s: str, delimiters: dict) -> dict:
     """
     Converts string representation of a database schema into nested dictionary.

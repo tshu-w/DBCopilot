@@ -1,4 +1,7 @@
+import json
+from collections import defaultdict
 from functools import partial
+from pathlib import Path
 from typing import Optional
 
 import lightning.pytorch as pl
@@ -12,7 +15,7 @@ from transformers import (
 )
 
 from src.models.modules import ConstraintDecoder, Recall
-from src.utils.helpers import str2schema
+from src.utils.helpers import chunks, str2schema
 
 
 def prefix_allowed_tokens_fn(batch_id, sent, constraint_decoder):
@@ -72,6 +75,8 @@ class SchemaRouting(pl.LightningModule):
                 }
             )
 
+        self.outputs = defaultdict(list)
+
     def setup(self, stage: str) -> None:
         # prepare prefix_allowed_tokens_fn for constraint decoding
         constraint_decoding = self.generator_config.pop("constraint_decoding", False)
@@ -105,7 +110,9 @@ class SchemaRouting(pl.LightningModule):
 
         return loss
 
-    def evaluation_step(self, batch, step: str) -> Optional[STEP_OUTPUT]:
+    def evaluation_step(
+        self, batch, step: str, dataloader_idx: int = 0
+    ) -> Optional[STEP_OUTPUT]:
         batch.pop("decoder_input_ids", None)
 
         outputs = self.model.generate(**batch, **self.generator_config)
@@ -116,6 +123,14 @@ class SchemaRouting(pl.LightningModule):
             )
         ]
         pred_schemas = [str2schema(s, self.hparams.delimiters) for s in pred_texts]
+        batch_size = len(batch["input_ids"])
+        chunk_size = len(pred_schemas) // batch_size
+        self.outputs[f"{step}_pred_texts_{dataloader_idx}"].extend(
+            chunks(pred_texts, chunk_size) if chunk_size > 1 else pred_texts
+        )
+        self.outputs[f"{step}_pred_schemas_{dataloader_idx}"].extend(
+            chunks(pred_schemas, chunk_size) if chunk_size > 1 else pred_schemas
+        )
 
         labels = torch.where(
             batch["labels"] != -100, batch["labels"], self.tokenizer.pad_token_id
@@ -127,6 +142,8 @@ class SchemaRouting(pl.LightningModule):
             )
         ]
         target_schemas = [str2schema(s, self.hparams.delimiters) for s in target_texts]
+        self.outputs[f"{step}_tgt_texts_{dataloader_idx}"].extend(target_texts)
+        self.outputs[f"{step}_tgt_schemas_{dataloader_idx}"].extend(target_schemas)
 
         self.update_metrics(pred_schemas, target_schemas, step=step)
         self.log_dict(self.metrics[step], prog_bar=True)
@@ -142,7 +159,7 @@ class SchemaRouting(pl.LightningModule):
     def test_step(
         self, batch, batch_idx: int, dataloader_idx: int = 0
     ) -> Optional[STEP_OUTPUT]:
-        return self.evaluation_step(batch, step="test")
+        return self.evaluation_step(batch, step="test", dataloader_idx=dataloader_idx)
 
     def update_metrics(
         self, pred_schemas: list[dict], target_schemas: list[dict], step: str
@@ -184,6 +201,22 @@ class SchemaRouting(pl.LightningModule):
                 s = s.replace(getattr(self.tokenizer, token), "")
 
         return s.strip()
+
+    def on_validation_epoch_end(self) -> None:
+        for k, v in self.outputs.items():
+            pth = Path(self.trainer.log_dir) / f"{k}.json"
+            with pth.open("w") as f:
+                json.dump(v, f, indent=2, ensure_ascii=False)
+
+        self.outputs.clear()
+
+    def on_test_epoch_end(self) -> None:
+        for k, v in self.outputs.items():
+            pth = Path(self.trainer.log_dir) / f"{k}.json"
+            with pth.open("w") as f:
+                json.dump(v, f, indent=2, ensure_ascii=False)
+
+        self.outputs.clear()
 
     def configure_optimizers(self):
         no_decay = ["bias", "LayerNorm.weight"]
