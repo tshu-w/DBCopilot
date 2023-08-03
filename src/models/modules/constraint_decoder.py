@@ -254,7 +254,7 @@ class ConstraintDecoder:
                 ) as candidates:
                     database, tables, _ = exist_schemas
                     key = f"{database}.{tables[-1]}"
-                    if self.tries["column"][key].search([]):
+                    if self.tries["column"][key].findnext([]):
                         allow_delimiters = [
                             self.delimiter_ids["separator"],
                             self.delimiter_ids["terminator"],
