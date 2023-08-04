@@ -26,14 +26,13 @@ def run_cli(config, debug: bool = True, command: str = "fit", devices: int = 1):
     if ckpt_path is not None:
         config_path = Path(ckpt_path).parents[1] / "config.yaml"
         argv.extend(["--config", str(config_path)])
-        argv.extend(["--ckpt_path", ckpt_path or "null"])
+        argv.extend(["--ckpt_path", ckpt_path])
         config.pop("config", None)
         config.pop("data_config", None)
     else:
-        argv.extend(["--config", config.pop("config")])
-        data_config = config.pop("data_config", None)
-        if data_config:
-            argv.extend(["--config", data_config])
+        for cfg in ["config", "data_config"]:
+            if cfg in config:
+                argv.extend(["--config", config.pop(cfg)])
 
     argv.extend(
         itertools.chain(
@@ -66,14 +65,14 @@ def sweep(
     gpus_per_trial: Union[int, float] = 1,
     *,
     ckpt_paths: list[Optional[str]] = [None],
-    configs: list[str] = ["configs/mnist.yaml"],
-    data_configs: list[Optional[str]] = [None],
+    configs: list[str] = [],
+    data_configs: list[Optional[str]] = [],
     override_kwargs: dict[str, Any] = {},
 ):
     param_space = {
         "ckpt_path": tune.grid_search(ckpt_paths),
-        "config": tune.grid_search(configs),
-        "data_config": tune.grid_search(data_configs),
+        **({"config": tune.grid_search(configs)} if configs else {}),
+        **({"data_config": tune.grid_search(data_configs)} if data_configs else {}),
         **{
             k: tune.grid_search(v) if isinstance(v, list) else tune.grid_search([v])
             for k, v in override_kwargs.items()
