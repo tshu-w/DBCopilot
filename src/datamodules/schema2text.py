@@ -51,7 +51,7 @@ class Schema2Text(pl.LightningDataModule):
                 map(str, sorted(Path("data").glob(f"{dataset}_train*.json")))
             ),
             **{
-                f.stem[len(dataset) :]: [str(f)]
+                f.stem[len(dataset) + 1 :]: [str(f)]
                 for f in sorted(Path("data").glob(f"{dataset}_test*.json"))
             },
         }
