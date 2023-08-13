@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Literal
 
 from datasets import Dataset
+from lightning.fabric.utilities.seed import seed_everything
 from lightning.pytorch import Trainer
 from torch.utils.data import DataLoader
 
@@ -20,7 +21,7 @@ sys.path.append(str(Path(__file__).parent))
 from prepare_data import get_databases_info
 
 
-def generate_data(dataset: Literal["spider", "bird"], ckpt_path: str, k: int = 10):
+def generate_data(dataset: Literal["spider", "bird"], ckpt_path: str, k: int = 100):
     databases = get_databases_info(dataset)
     files = list(Path("./data").glob(f"{dataset}_*.json"))
     files = [f for f in files if not str(f).endswith("_schemas.json")]
@@ -90,6 +91,7 @@ def generate_data(dataset: Literal["spider", "bird"], ckpt_path: str, k: int = 1
 
 
 if __name__ == "__main__":
+    seed_everything(42)
     for dataset, ckpt_path in zip(
         ["spider", "bird"],
         [
