@@ -6,7 +6,6 @@ test:
   override_kwargs:
     model.generator_config:
       - max_new_tokens: 512
-      - max_new_tokens: 512
         constraint_decoding: true
       - max_new_tokens: 512
         num_beams: 10
