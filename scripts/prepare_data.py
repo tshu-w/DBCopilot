@@ -32,7 +32,7 @@ def get_databases_info(
 ) -> dict:
     databases = {}
     if dataset == "spider":
-        path = Path("./data/spider")
+        path = Path("./data/raw/spider")
         with (path / "tables.json").open(mode="r") as file:
             raw_tables = json.load(file)
 
@@ -49,7 +49,7 @@ def get_databases_info(
 
             databases[db["db_id"]] = tables
     elif dataset == "bird":
-        path = Path("./data/bird/")
+        path = Path("./data/raw/bird")
         with (path / "train" / "train_tables.json").open() as f:
             raw_tables = json.load(f)
 
@@ -75,7 +75,7 @@ def get_databases_info(
     return databases
 
 
-def spider(path=Path("./data/spider/")):
+def spider(path=Path("./data/raw/spider/")):
     databases = get_databases_info("spider")
 
     train_files = list(path.glob("train_*.json"))
@@ -118,7 +118,7 @@ def spider(path=Path("./data/spider/")):
 def spider_variants():
     databases = get_databases_info("spider")
 
-    with Path("./data/spider-syn/train_spider.json").open() as f:
+    with Path("./data/raw/spider-syn/train_spider.json").open() as f:
         train_data = json.load(f)
 
     for record in tqdm(train_data):
@@ -131,10 +131,10 @@ def spider_variants():
         for key in ["SpiderQuestion"]:
             record.pop(key, None)
 
-    with Path("./data/spider_train_syn.json").open("w") as f:
+    with Path("./data/raw/spider_train_syn.json").open("w") as f:
         json.dump(train_data, f, indent=2)
 
-    with Path("./data/spider-syn/dev.json").open() as f:
+    with Path("./data/raw/spider-syn/dev.json").open() as f:
         dev_data = json.load(f)
 
     for record in tqdm(dev_data):
@@ -147,10 +147,10 @@ def spider_variants():
         for key in ["SpiderQuestion"]:
             record.pop(key, None)
 
-    with Path("./data/spider_test_syn.json").open("w") as f:
+    with Path("./data/raw/spider_test_syn.json").open("w") as f:
         json.dump(dev_data, f, indent=2)
 
-    with Path("data/spider-realistic/spider-realistic.json").open() as f:
+    with Path("data/raw/spider-realistic/spider-realistic.json").open() as f:
         dev_data = json.load(f)
 
     for record in tqdm(dev_data):
@@ -162,11 +162,11 @@ def spider_variants():
         for key in ["query_toks", "query_toks_no_value", "question_toks", "sql"]:
             record.pop(key, None)
 
-    with Path("./data/spider_test_realistic.json").open("w") as f:
+    with Path("./data/raw/spider_test_realistic.json").open("w") as f:
         json.dump(dev_data, f, indent=2)
 
 
-def bird(path=Path("./data/bird/")):
+def bird(path=Path("./data/raw/bird/")):
     databases = get_databases_info("bird")
 
     with (path / "train" / "train.json").open() as f:
