@@ -53,11 +53,12 @@ def schema2str(schema: dict, delimiters: dict) -> str:
     Converts dict of a database schema into string representation.
 
     Input: {
-        "<database_name>": {
-            "<table_name_1>": ["<column_name_1>", "<column_name_2>"],
-            "<table_name_2>": ["<column_name_1>", "<column_name_2>", "<column_name_3>"],
-            "<table_name_3>": ["<column_name_1>"]
-        }
+      "database": "<database_name>",
+      "metadata": [
+        {"name": "<table_name_1>", "columns": ["<column_name_1>", "<column_name_2>"]},
+        {"name": "<table_name_2>", "columns": ["<column_name_1>", "<column_name_2>", "<column_name_3>"]},
+        {"name": "<table_name_3>", "columns": ["<column_name_1>"]}
+      ]
     }
 
     Output: '(<database_name> (<table_name_1> <column_name_1> <column_name_2>) (<table_name_2> <column_name_1> <column_name_2> <column_name_3>) (<table_name_3> <column_name_1>))'
