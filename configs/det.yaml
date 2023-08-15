@@ -20,5 +20,5 @@ bind_mounts:
 
 resources:
   slots: 1
-  resource_pool: TITAN-24G
+  resource_pool: A100-80G
   shm_size: 16G
