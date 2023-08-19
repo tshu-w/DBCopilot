@@ -2,7 +2,7 @@ import json
 import os
 from functools import partial
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal, Optional, Union
 
 import lightning.pytorch as pl
 import pandas as pd
@@ -43,7 +43,7 @@ class Text2Schema(pl.LightningDataModule):
     def __init__(
         self,
         dataset: Literal["spider", "bird"] = "spider",
-        add_pseudo: bool = False,
+        pseudo: Union[bool, str] = False,
         *,
         preprocessing_num_workers: int = None,
         batch_size: int = 32,
@@ -55,15 +55,16 @@ class Text2Schema(pl.LightningDataModule):
         self.dataset = dataset
         self.data_files = {
             "train": list(
-                map(str, sorted(Path("data").glob(f"{dataset}_train*.json")))
+                map(str, sorted(Path("data").glob(f"{dataset}*/train.json")))
             ),
             **{
                 f.stem[len(dataset) + 1 :]: [str(f)]
-                for f in sorted(Path("data").glob(f"{dataset}_test*.json"))
+                for f in sorted(Path("data").glob(f"{dataset}*/test.json"))
             },
         }
-        if add_pseudo:
-            self.data_files["train"].append(f"data/{dataset}_pseudo.json")
+        if pseudo:
+            pseudo = "pseudo_200" if pseudo is True else pseudo
+            self.data_files["train"].append(f"data/{dataset}/{pseudo}.json")
 
     def prepare_data(self) -> None:
         # setup first to prevent datasets cache conflicts in multiple processes.

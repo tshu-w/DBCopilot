@@ -8,8 +8,14 @@ from tqdm import tqdm
 
 sys.path.append(str(Path(__file__).parents[1]))
 
+RAW_DATA_PATH = Path("./data/raw")
+TGT_PATH = Path("./data/")
+
 
 def extract_metadata(sql_query: str, database: list[dict]):
+    """
+    Given a SQL query and a database schema, extract metadata from the query.
+    """
     parsed_query = parse_one(sql_query, read="sqlite")
 
     tables = [t.name.lower() for t in parsed_query.find_all(exp.Table)]
@@ -27,13 +33,12 @@ def extract_metadata(sql_query: str, database: list[dict]):
     return metadata
 
 
-def get_databases_info(
+def get_dataset_schemas(
     dataset: Literal["spider", "bird"] = "spider",
 ) -> dict:
     databases = {}
     if dataset == "spider":
-        path = Path("./data/raw/spider")
-        with (path / "tables.json").open(mode="r") as file:
+        with (RAW_DATA_PATH / dataset / "tables.json").open(mode="r") as file:
             raw_tables = json.load(file)
 
         for db in raw_tables:
@@ -49,11 +54,10 @@ def get_databases_info(
 
             databases[db["db_id"]] = tables
     elif dataset == "bird":
-        path = Path("./data/raw/bird")
-        with (path / "train" / "train_tables.json").open() as f:
+        with (RAW_DATA_PATH / dataset / "train" / "train_tables.json").open() as f:
             raw_tables = json.load(f)
 
-        with (path / "dev" / "dev_tables.json").open() as f:
+        with (RAW_DATA_PATH / dataset / "dev" / "dev_tables.json").open() as f:
             raw_tables.extend(json.load(f))
 
         databases = {}
@@ -75,10 +79,11 @@ def get_databases_info(
     return databases
 
 
-def spider(path=Path("./data/raw/spider/")):
-    databases = get_databases_info("spider")
+def spider(ds_path=RAW_DATA_PATH / "spider", tgt_path=TGT_PATH / "spider"):
+    databases = get_dataset_schemas("spider")
+    tgt_path.mkdir(exist_ok=True, parents=True)
 
-    train_files = list(path.glob("train_*.json"))
+    train_files = list(ds_path.glob("train_*.json"))
     train_data = []
     for f in train_files:
         with f.open() as f:
@@ -93,10 +98,10 @@ def spider(path=Path("./data/raw/spider/")):
         for key in ["query_toks", "query_toks_no_value", "question_toks", "sql"]:
             record.pop(key, None)
 
-    with (path.parent / "spider_train.json").open("w") as f:
+    with (tgt_path / "train.json").open("w") as f:
         json.dump(train_data, f, indent=2)
 
-    with (path / "dev.json").open() as f:
+    with (ds_path / "dev.json").open() as f:
         dev_data = json.load(f)
 
     for record in tqdm(dev_data):
@@ -108,17 +113,18 @@ def spider(path=Path("./data/raw/spider/")):
         for key in ["query_toks", "query_toks_no_value", "question_toks", "sql"]:
             record.pop(key, None)
 
-    with (path.parent / "spider_test.json").open("w") as f:
+    with (tgt_path / "test.json").open("w") as f:
         json.dump(dev_data, f, indent=2)
 
-    with (path.parent / "spider_schemas.json").open("w") as f:
+    with (tgt_path / "schemas.json").open("w") as f:
         json.dump(databases, f, indent=2)
 
 
-def spider_variants():
-    databases = get_databases_info("spider")
+def spider_syn(ds_path=RAW_DATA_PATH / "spider-syn", tgt_path=TGT_PATH / "spider_syn"):
+    databases = get_dataset_schemas("spider")
+    tgt_path.mkdir(exist_ok=True, parents=True)
 
-    with Path("./data/raw/spider-syn/train_spider.json").open() as f:
+    with (ds_path / "train_spider.json").open() as f:
         train_data = json.load(f)
 
     for record in tqdm(train_data):
@@ -131,10 +137,10 @@ def spider_variants():
         for key in ["SpiderQuestion"]:
             record.pop(key, None)
 
-    with Path("./data/raw/spider_train_syn.json").open("w") as f:
+    with (tgt_path / "train.json").open("w") as f:
         json.dump(train_data, f, indent=2)
 
-    with Path("./data/raw/spider-syn/dev.json").open() as f:
+    with (ds_path / "dev.json").open() as f:
         dev_data = json.load(f)
 
     for record in tqdm(dev_data):
@@ -147,10 +153,20 @@ def spider_variants():
         for key in ["SpiderQuestion"]:
             record.pop(key, None)
 
-    with Path("./data/raw/spider_test_syn.json").open("w") as f:
+    with (tgt_path / "test.json").open("w") as f:
         json.dump(dev_data, f, indent=2)
 
-    with Path("data/raw/spider-realistic/spider-realistic.json").open() as f:
+    with (tgt_path / "schemas.json").open("w") as f:
+        json.dump(databases, f, indent=2)
+
+
+def spider_realistic(
+    ds_path=RAW_DATA_PATH / "spider-realistic", tgt_path=TGT_PATH / "spider_realistic"
+):
+    databases = get_dataset_schemas("spider")
+    tgt_path.mkdir(exist_ok=True, parents=True)
+
+    with (ds_path / "spider-realistic.json").open() as f:
         dev_data = json.load(f)
 
     for record in tqdm(dev_data):
@@ -162,14 +178,18 @@ def spider_variants():
         for key in ["query_toks", "query_toks_no_value", "question_toks", "sql"]:
             record.pop(key, None)
 
-    with Path("./data/raw/spider_test_realistic.json").open("w") as f:
+    with (tgt_path / "test.json").open("w") as f:
         json.dump(dev_data, f, indent=2)
 
+    with (tgt_path / "schemas.json").open("w") as f:
+        json.dump(databases, f, indent=2)
 
-def bird(path=Path("./data/raw/bird/")):
-    databases = get_databases_info("bird")
 
-    with (path / "train" / "train.json").open() as f:
+def bird(ds_path=RAW_DATA_PATH / "bird", tgt_path=TGT_PATH / "bird"):
+    databases = get_dataset_schemas("bird")
+    tgt_path.mkdir(exist_ok=True, parents=True)
+
+    with (ds_path / "train" / "train.json").open() as f:
         train_data = json.load(f)
 
     for record in tqdm(train_data[:]):
@@ -186,10 +206,10 @@ def bird(path=Path("./data/raw/bird/")):
         except Exception:
             train_data.remove(record)
 
-    with (path.parent / "bird_train.json").open("w") as f:
+    with (tgt_path / "train.json").open("w") as f:
         json.dump(train_data, f, indent=2)
 
-    with (path / "dev" / "dev.json").open() as f:
+    with (ds_path / "dev" / "dev.json").open() as f:
         dev_data = json.load(f)
 
     for record in tqdm(dev_data[:]):
@@ -212,14 +232,15 @@ def bird(path=Path("./data/raw/bird/")):
         except Exception:
             dev_data.remove(record)
 
-    with (path.parent / "bird_test.json").open("w") as f:
+    with (tgt_path / "test.json").open("w") as f:
         json.dump(dev_data, f, indent=2)
 
-    with (path.parent / "bird_schemas.json").open("w") as f:
+    with (tgt_path / "schemas.json").open("w") as f:
         json.dump(databases, f, indent=2)
 
 
 if __name__ == "__main__":
     spider()
-    spider_variants()
+    spider_syn()
+    spider_realistic()
     bird()

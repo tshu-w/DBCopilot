@@ -57,11 +57,11 @@ def generate_qrels(instances, resolution) -> dict[str, dict]:
 
 
 def retrieve_schemas(
-    dataset: Literal["spider", "bird"],
+    dataset: str,
     resolution: Literal["database", "table", "column", "all_table", "all_column"],
 ):
     retriever = SparseRetriever(index_name=f"data/{dataset}.index")
-    with Path(f"data/{dataset}_schemas.json").open() as f:
+    with Path(f"data/{dataset}/schemas.json").open() as f:
         schemas = json.load(f)
 
     if "all" not in resolution:
@@ -70,7 +70,7 @@ def retrieve_schemas(
             show_progress=False,
         )
 
-    for path in Path("data").glob(f"{dataset}_test*.json"):
+    for path in Path("data").glob(f"{dataset}/test.json"):
         with path.open() as f:
             test = json.load(f)
 
@@ -99,7 +99,7 @@ def retrieve_schemas(
         run = Run(results)
         metrics = ["recall@1", "recall@5", "recall@10", "f1@10", "f1"]
         print(
-            path.stem,
+            dataset,
             resolution,
             evaluate(qrels, run, metrics=metrics),
             sep="\t",
@@ -107,6 +107,6 @@ def retrieve_schemas(
 
 
 if __name__ == "__main__":
-    for dataset in ["spider", "bird"]:
-        for resolution in ["database", "table", "column", "all_table", "all_column"]:
+    for dataset in ["spider", "bird", "spider_syn", "spider_realistic"]:
+        for resolution in ["database", "table", "all_table"]:
             retrieve_schemas(dataset, resolution)

@@ -15,7 +15,7 @@ from src.utils.text2sql import text2sql
 
 sys.path.append(str(Path(__file__).parent))
 
-from prepare_data import get_databases_info
+from prepare_data import get_dataset_schemas
 
 
 def evaluate_text2sql(
@@ -24,15 +24,15 @@ def evaluate_text2sql(
     model_name: str = "gpt-3.5-turbo",
     override: bool = True,
 ):
-    databases = get_databases_info(dataset)
-    with Path(f"./data/dev_{dataset}.json").open() as file:
+    databases = get_dataset_schemas(dataset)
+    with Path(f"./data/{dataset}/test.json").open() as file:
         dev = json.load(file)
 
     # model = guidance.llms.OpenAI(model_name)
     model = OpenAI(model_name)
     # model.default_system_prompt = "You are ChatGPT, a large language model trained by OpenAI, based on the GPT-3.5 architecture."
 
-    pred_file = Path(f"./data/results/{dataset}_{schema}_{model_name}.txt")
+    pred_file = Path(f"./data/text2sql_results/{dataset}_{schema}_{model_name}.txt")
     print(f"{dataset}_{schema}_{model_name}")
     if override or not pred_file.exists():
         preds = []
@@ -66,7 +66,7 @@ def evaluate_text2sql(
             print(model.get_usage_cost_usd())
 
     if dataset == "spider":
-        root_dir = "data/spider"
+        root_dir = "data/raw/spider"
         cmd = f"python src/vendor/test-suite-sql-eval/evaluation.py --pred {pred_file} --db {root_dir}/database --gold {root_dir}/dev_gold.sql --table {root_dir}/tables.json --etype exec"
         result = subprocess.run(shlex.split(cmd), stdout=subprocess.PIPE)
         print(result.stdout.decode("utf-8"))
@@ -83,7 +83,7 @@ def evaluate_text2sql(
             with dest_file.open("w") as f:
                 json.dump(preds, f, indent=4)
 
-            root_dir = "data/bird/dev"
+            root_dir = "data/raw/bird/dev"
             cmd = f"python src/vendor/DAMO-ConvAI/bird/llm/src/evaluation.py --predicted_sql_path {tmpdir}/ --ground_truth_path {root_dir}/ --db_root_path {root_dir}/dev_databases/ --diff_json_path {root_dir}/dev.json --num_cpus 8 --data_mode dev"
             result = subprocess.run(shlex.split(cmd), stdout=subprocess.PIPE)
             print(result.stdout.decode("utf-8"))
