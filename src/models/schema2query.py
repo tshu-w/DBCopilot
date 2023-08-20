@@ -18,11 +18,6 @@ class Schema2Query(pl.LightningModule):
         generator_config: dict = {
             "max_new_tokens": 512,
         },
-        delimiters: dict[str, str] = {
-            "initiator": "<(>",
-            "separator": "< >",
-            "terminator": "<)>",
-        },
         *,
         max_length: int = 512,
         weight_decay: float = 0.0,
@@ -38,12 +33,6 @@ class Schema2Query(pl.LightningModule):
         )
         self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name_or_path)
         self.generator_config = generator_config
-
-        num_added = self.tokenizer.add_tokens(
-            list(delimiters.values()), special_tokens=True
-        )
-        if num_added > 0:
-            self.model.resize_token_embeddings(len(self.tokenizer))
 
         self.collate_fn = DataCollatorForSeq2Seq(
             tokenizer=self.tokenizer, model=self.model

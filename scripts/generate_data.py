@@ -70,7 +70,6 @@ def generate_data(dataset: str, ckpt_path: str, k: int = 200):
     _preprocess = partial(
         preprocess,
         tokenizer=model.tokenizer,
-        delimiters=model.hparams.delimiters,
         max_length=model.hparams.max_length,
     )
     ds = ds.map(

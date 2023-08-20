@@ -3,13 +3,10 @@ fit:
   gpus_per_trial: 1
   configs:
     - configs/schema2query.yaml
-  data_configs:
-    - configs/spider_s2q.yaml
-    - configs/bird_s2q.yaml
   override_kwargs:
     seed_everything:
       - 123
     model.model_name_or_path:
       - "./models/t5-base"
-      - "./models/msmarco-t5-base-v1"
       - "./models/all-t5-base-v1"
+      - "./models/flan-t5-base"

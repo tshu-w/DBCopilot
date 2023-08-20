@@ -1,5 +1,6 @@
 import json
 import os
+from collections import defaultdict
 from functools import partial
 from pathlib import Path
 from typing import Literal, Optional, Union
@@ -10,15 +11,15 @@ from datasets import Dataset, concatenate_datasets, load_dataset
 from lightning.pytorch.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
 from torch.utils.data import DataLoader
 
-from src.utils.helpers import schema2str
+from src.utils.helpers import schema2label
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
-def preprocess(batch, tokenizer, delimiters, max_length):
+def preprocess(batch, tokenizer, separator, max_length):
     inputs, targets = [], []
     for question, schema in zip(batch["question"], batch["schema"]):
-        target = schema2str(schema, delimiters)
+        target = schema2label(schema, separator)
         targets.append(target)
 
         if question is None:
@@ -43,7 +44,8 @@ class Text2Schema(pl.LightningDataModule):
     def __init__(
         self,
         dataset: Literal["spider", "bird"] = "spider",
-        pseudo: Union[bool, str] = False,
+        pseudo: Union[bool, str] = True,
+        add_db: bool = True,
         *,
         preprocessing_num_workers: int = None,
         batch_size: int = 32,
@@ -58,7 +60,9 @@ class Text2Schema(pl.LightningDataModule):
                 map(str, sorted(Path("data").glob(f"{dataset}*/train.json")))
             ),
             **{
-                f.stem[len(dataset) + 1 :]: [str(f)]
+                "test"
+                if f.parent.stem == dataset
+                else f"test_{f.parent.stem[len(dataset) + 1:]}": [str(f)]
                 for f in sorted(Path("data").glob(f"{dataset}*/test.json"))
             },
         }
@@ -74,8 +78,16 @@ class Text2Schema(pl.LightningDataModule):
         if not hasattr(self, "datasets"):
             datasets = load_dataset("json", data_files=self.data_files)
 
-            with Path(f"data/{self.dataset}_schemas.json").open("r") as f:
+            with Path(f"data/{self.dataset}/schemas.json").open("r") as f:
                 self.schemas = json.load(f)
+
+            if self.hparams.add_db is False:
+                self.tbl2db = defaultdict(list)
+                for database, tables in self.schemas.items():
+                    for table in tables:
+                        self.tbl2db[table["name"]].append(database)
+            else:
+                self.tbl2db = {}
 
             list_of_schemas = [
                 {"schema": {"database": k, "metadata": v}}
@@ -94,7 +106,7 @@ class Text2Schema(pl.LightningDataModule):
             _preprocess = partial(
                 preprocess,
                 tokenizer=self.trainer.model.tokenizer,
-                delimiters=self.trainer.model.hparams.delimiters,
+                separator=self.trainer.model.hparams.separator,
                 max_length=self.trainer.model.hparams.max_length,
             )
             self.datasets = datasets.map(

@@ -14,16 +14,8 @@ from transformers import (
     get_scheduler,
 )
 
-from src.models.modules import ConstraintDecoder, Recall
-from src.utils.helpers import chunks, str2schema
-
-
-def prefix_allowed_tokens_fn(batch_id, sent, constraint_decoder):
-    try:
-        allowed_tokens = constraint_decoder(sent.tolist())
-    except Exception:
-        allowed_tokens = [constraint_decoder.tokenizer.eos_token_id]
-    return allowed_tokens
+from src.models.modules import Recall
+from src.utils.helpers import chunks, label2schema
 
 
 class SchemaRouting(pl.LightningModule):
@@ -32,13 +24,8 @@ class SchemaRouting(pl.LightningModule):
         model_name_or_path: str,
         generator_config: dict = {
             "max_new_tokens": 512,
-            "constraint_decoding": True,
         },
-        delimiters: dict[str, str] = {
-            "initiator": "<(>",
-            "separator": "< >",
-            "terminator": "<)>",
-        },
+        separator: str = "< >",
         *,
         max_length: int = 512,
         weight_decay: float = 0.0,
@@ -55,9 +42,7 @@ class SchemaRouting(pl.LightningModule):
         self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name_or_path)
         self.generator_config = generator_config
 
-        num_added = self.tokenizer.add_tokens(
-            list(delimiters.values()), special_tokens=True
-        )
+        num_added = self.tokenizer.add_tokens([separator], special_tokens=True)
         if num_added > 0:
             self.model.resize_token_embeddings(len(self.tokenizer))
 
@@ -71,30 +56,10 @@ class SchemaRouting(pl.LightningModule):
                 {
                     f"{step}/dR": Recall(),
                     f"{step}/tR": Recall(),
-                    f"{step}/cR": Recall(),
                 }
             )
 
         self.outputs = defaultdict(list)
-
-    def setup(self, stage: str) -> None:
-        # prepare prefix_allowed_tokens_fn for constraint decoding
-        constraint_decoding = self.generator_config.pop("constraint_decoding", False)
-        if (
-            constraint_decoding
-            and self.generator_config.get("prefix_allowed_tokens_fn", None) is None
-        ):
-            constraint_decoder = ConstraintDecoder(
-                tokenizer=self.tokenizer,
-                delimiters=self.hparams.delimiters,
-                schemas=self.trainer.datamodule.schemas,
-            )
-            partial_prefix_allowed_tokens_fn = partial(
-                prefix_allowed_tokens_fn, constraint_decoder=constraint_decoder
-            )
-            self.generator_config[
-                "prefix_allowed_tokens_fn"
-            ] = partial_prefix_allowed_tokens_fn
 
     def forward(self, **inputs):
         return self.model(**inputs)
@@ -122,7 +87,13 @@ class SchemaRouting(pl.LightningModule):
                 outputs, skip_special_tokens=False, clean_up_tokenization_spaces=False
             )
         ]
-        pred_schemas = [str2schema(s, self.hparams.delimiters) for s in pred_texts]
+        _label2schema = partial(
+            label2schema,
+            separator=self.hparams.separator,
+            add_db=self.trainer.datamodule.hparams.add_db,
+            tbl2db=self.trainer.datamodule.tbl2db,
+        )
+        pred_schemas = [_label2schema(s) for s in pred_texts]
         batch_size = len(batch["input_ids"])
         chunk_size = len(pred_schemas) // batch_size
         self.outputs[f"{step}_pred_texts_{dataloader_idx}"].extend(
@@ -141,7 +112,7 @@ class SchemaRouting(pl.LightningModule):
                 labels, skip_special_tokens=False, clean_up_tokenization_spaces=False
             )
         ]
-        target_schemas = [str2schema(s, self.hparams.delimiters) for s in target_texts]
+        target_schemas = [_label2schema(s) for s in target_texts]
         self.outputs[f"{step}_tgt_texts_{dataloader_idx}"].extend(target_texts)
         self.outputs[f"{step}_tgt_schemas_{dataloader_idx}"].extend(target_schemas)
 
@@ -183,17 +154,6 @@ class SchemaRouting(pl.LightningModule):
         target_tables = [[f"{d}.{t}" for d in s for t in s[d]] for s in target_schemas]
         pred_tables = merge_nested_list(pred_tables, step=merge_step)
         self.metrics[step][f"{step}/tR"](pred_tables, target_tables)
-
-        pred_columns = [
-            [f"{d}.{t}.{c}" for d in s for t in s[d] for c in s[d][t]]
-            for s in pred_schemas
-        ]
-        target_columns = [
-            [f"{d}.{t}.{c}" for d in s for t in s[d] for c in s[d][t]]
-            for s in target_schemas
-        ]
-        pred_columns = merge_nested_list(pred_columns, step=merge_step)
-        self.metrics[step][f"{step}/cR"](pred_columns, target_columns)
 
     def postprocess_text(self, s: str) -> str:
         for token in ["bos_token", "pad_token", "eos_token"]:

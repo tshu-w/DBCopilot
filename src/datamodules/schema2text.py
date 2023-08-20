@@ -1,23 +1,23 @@
-import json
 import os
 from functools import partial
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Optional
 
 import lightning.pytorch as pl
 from datasets import load_dataset
 from lightning.pytorch.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
 from torch.utils.data import DataLoader
 
-from src.utils.helpers import schema2str
+from src.utils.helpers import schema2desc
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
-def preprocess(batch, tokenizer, delimiters, max_length):
+def preprocess(batch, tokenizer, max_length):
     inputs, targets = [], []
     for schema in batch["schema"]:
-        inputs.append(schema2str(schema, delimiters))
+        input = f"Ask a question for the database with the following schema.\n{schema2desc(schema)}"
+        inputs.append(input)
 
     if "question" in batch:
         for question in batch["question"]:
@@ -36,7 +36,7 @@ def preprocess(batch, tokenizer, delimiters, max_length):
 class Schema2Text(pl.LightningDataModule):
     def __init__(
         self,
-        dataset: Literal["spider", "bird"] = "spider",
+        dataset: str = "",
         *,
         preprocessing_num_workers: int = None,
         batch_size: int = 32,
@@ -51,7 +51,9 @@ class Schema2Text(pl.LightningDataModule):
                 map(str, sorted(Path("data").glob(f"{dataset}*/train.json")))
             ),
             **{
-                f.stem[len(dataset) + 1 :]: [str(f)]
+                "test"
+                if f.parent.stem == dataset
+                else f"test_{f.parent.stem[len(dataset) + 1:]}": [str(f)]
                 for f in sorted(Path("data").glob(f"{dataset}*/test.json"))
             },
         }
@@ -64,9 +66,6 @@ class Schema2Text(pl.LightningDataModule):
         if not hasattr(self, "datasets"):
             datasets = load_dataset("json", data_files=self.data_files)
 
-            with Path(f"data/{self.dataset}_schemas.json").open("r") as f:
-                self.schemas = json.load(f)
-
             if "validation" not in datasets:
                 datasets_split = datasets["train"].train_test_split(
                     test_size=0.1, shuffle=True
@@ -77,7 +76,6 @@ class Schema2Text(pl.LightningDataModule):
             _preprocess = partial(
                 preprocess,
                 tokenizer=self.trainer.model.tokenizer,
-                delimiters=self.trainer.model.hparams.delimiters,
                 max_length=self.trainer.model.hparams.max_length,
             )
             self.datasets = datasets.map(
