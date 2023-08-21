@@ -19,6 +19,7 @@ nltk
 sqlglot
 tenacity
 func-timeout
+wordninja
 
 # dev tools
 wandb

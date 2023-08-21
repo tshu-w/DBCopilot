@@ -1,7 +1,6 @@
 import json
 import sys
 from pathlib import Path
-from typing import Literal
 
 from sqlglot import exp, parse_one
 from tqdm import tqdm
@@ -33,9 +32,7 @@ def extract_metadata(sql_query: str, database: list[dict]):
     return metadata
 
 
-def get_dataset_schemas(
-    dataset: Literal["spider", "bird"] = "spider",
-) -> dict:
+def get_dataset_schemas(dataset) -> dict:
     databases = {}
     if dataset == "spider":
         with (RAW_DATA_PATH / dataset / "tables.json").open(mode="r") as file:
@@ -61,6 +58,23 @@ def get_dataset_schemas(
             raw_tables.extend(json.load(f))
 
         databases = {}
+        for db in raw_tables:
+            tables = []
+            for i, table_name in enumerate(db["table_names_original"]):
+                columns = list(
+                    map(
+                        lambda x: x[1].lower(),
+                        filter(lambda x: x[0] == i, db["column_names_original"]),
+                    )
+                )
+                tables.append({"name": table_name.lower(), "columns": columns})
+
+            databases[db["db_id"]] = tables
+    elif dataset in ["fiben", "wikisql"]:
+        data_path = RAW_DATA_PATH / f"unified-text2sql-benchmark/unified/{dataset}"
+        with (data_path / "tables.json").open(mode="r") as file:
+            raw_tables = json.load(file)
+
         for db in raw_tables:
             tables = []
             for i, table_name in enumerate(db["table_names_original"]):
@@ -239,8 +253,96 @@ def bird(ds_path=RAW_DATA_PATH / "bird", tgt_path=TGT_PATH / "bird"):
         json.dump(databases, f, indent=2)
 
 
+def fiben(
+    ds_path=RAW_DATA_PATH / "unified-text2sql-benchmark/unified/fiben",
+    tgt_path=TGT_PATH / "fiben",
+):
+    databases = get_dataset_schemas("fiben")
+    tgt_path.mkdir(exist_ok=True, parents=True)
+
+    dev_data = []
+    with (ds_path / "dev.jsonl").open() as f:
+        for line in f:
+            dev_data.append(json.loads(line))
+
+    for record in tqdm(dev_data[:]):
+        try:
+            metadata = extract_metadata(record["query"], databases[record["db_id"]])
+            record["schema"] = {
+                "database": record.pop("db_id"),
+                "metadata": metadata,
+            }
+            for key in ["query_toks", "query_toks_no_value", "question_toks", "sql"]:
+                record.pop(key, None)
+            record["question"] = record["question"].strip()
+            record["query"] = record["query"].strip()
+        except Exception:
+            dev_data.remove(record)
+
+    with (tgt_path / "test.json").open("w") as f:
+        json.dump(dev_data, f, indent=2)
+
+    with (tgt_path / "schemas.json").open("w") as f:
+        json.dump(databases, f, indent=2)
+
+
+def wikisql(
+    ds_path=RAW_DATA_PATH / "unified-text2sql-benchmark/unified/wikisql",
+    tgt_path=TGT_PATH / "wikisql",
+):
+    databases = get_dataset_schemas("wikisql")
+    tgt_path.mkdir(exist_ok=True, parents=True)
+
+    train_files = [ds_path / "train.jsonl", ds_path / "dev.jsonl"]
+    train_data = []
+    for f in train_files:
+        with f.open() as f:
+            for line in f:
+                train_data.append(json.loads(line))
+
+    for record in tqdm(train_data[:]):
+        try:
+            metadata = extract_metadata(record["query"], databases[record["db_id"]])
+            record["schema"] = {
+                "database": record.pop("db_id"),
+                "metadata": metadata,
+            }
+            for key in ["query_toks", "query_toks_no_value", "question_toks", "sql"]:
+                record.pop(key, None)
+        except Exception:
+            train_data.remove(record)
+
+    with (tgt_path / "train.json").open("w") as f:
+        json.dump(train_data, f, indent=2)
+
+    dev_data = []
+    with (ds_path / "test.jsonl").open() as f:
+        for line in f:
+            dev_data.append(json.loads(line))
+
+    for record in tqdm(dev_data[:]):
+        try:
+            metadata = extract_metadata(record["query"], databases[record["db_id"]])
+            record["schema"] = {
+                "database": record.pop("db_id"),
+                "metadata": metadata,
+            }
+            for key in ["query_toks", "query_toks_no_value", "question_toks", "sql"]:
+                record.pop(key, None)
+        except Exception:
+            dev_data.remove(record)
+
+    with (tgt_path / "test.json").open("w") as f:
+        json.dump(dev_data, f, indent=2)
+
+    with (tgt_path / "schemas.json").open("w") as f:
+        json.dump(databases, f, indent=2)
+
+
 if __name__ == "__main__":
     spider()
     spider_syn()
     spider_realistic()
     bird()
+    fiben()
+    wikisql()

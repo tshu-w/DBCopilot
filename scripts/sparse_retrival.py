@@ -2,8 +2,12 @@ import json
 from pathlib import Path
 from typing import Literal
 
+import numpy as np
+import wordninja
 from ranx import Qrels, Run, evaluate
 from retriv import SparseRetriever
+from rich.console import Console
+from rich.table import Table
 
 
 def generate_collection(schemas, resolution) -> dict[str, str]:
@@ -68,45 +72,62 @@ def retrieve_schemas(
         retriever = retriever.index(
             generate_collection(schemas.items(), resolution),
             show_progress=False,
+            callback=lambda x: {
+                "id": x["id"],
+                "text": " ".join(wordninja.split(x["text"])),
+            },
         )
+        if not isinstance(retriever.relative_doc_lens, np.ndarray):
+            retriever.relative_doc_lens = np.array(retriever.relative_doc_lens).reshape(
+                -1
+            )
 
-    for path in Path("data").glob(f"{dataset}/test.json"):
-        with path.open() as f:
-            test = json.load(f)
+    test_path = Path("data") / f"{dataset}" / "test.json"
+    with test_path.open() as f:
+        test = json.load(f)
 
-        queries = [{"id": str(i), "text": it["question"]} for i, it in enumerate(test)]
-        if "all" not in resolution:
-            results = retriever.bsearch(queries, show_progress=False)
-        elif resolution == "all_table":
-            results = {
-                str(i): {
-                    f"{it['schema']['database']}.{tbl['name']}": 1
-                    for tbl in schemas[it["schema"]["database"]]
-                }
-                for i, it in enumerate(test)
+    queries = [{"id": str(i), "text": it["question"]} for i, it in enumerate(test)]
+    if "all" not in resolution:
+        results = retriever.bsearch(queries, show_progress=False)
+    elif resolution == "all_table":
+        results = {
+            str(i): {
+                f"{it['schema']['database']}.{tbl['name']}": 1
+                for tbl in schemas[it["schema"]["database"]]
             }
-        elif resolution == "all_column":
-            results = {
-                str(i): {
-                    f"{it['schema']['database']}.{tbl['name']}.{col}": 1
-                    for tbl in schemas[it["schema"]["database"]]
-                    for col in tbl["columns"]
-                }
-                for i, it in enumerate(test)
+            for i, it in enumerate(test)
+        }
+    elif resolution == "all_column":
+        results = {
+            str(i): {
+                f"{it['schema']['database']}.{tbl['name']}.{col}": 1
+                for tbl in schemas[it["schema"]["database"]]
+                for col in tbl["columns"]
             }
+            for i, it in enumerate(test)
+        }
 
-        qrels = Qrels(generate_qrels(test, resolution))
-        run = Run(results)
-        metrics = ["recall@1", "recall@5", "recall@10", "f1@10", "f1"]
-        print(
-            dataset,
-            resolution,
-            evaluate(qrels, run, metrics=metrics),
-            sep="\t",
-        )
+    qrels = Qrels(generate_qrels(test, resolution))
+    run = Run(results)
+    metrics = ["recall@1", "recall@5", "recall@10", "f1@10", "f1"]
+    return evaluate(qrels, run, metrics=metrics)
 
 
 if __name__ == "__main__":
-    for dataset in ["spider", "bird", "spider_syn", "spider_realistic"]:
+    console = Console()
+    table = Table(
+        *["Dataset", "Resolution", "recall@1", "recall@5", "recall@10", "f1@10", "f1"]
+    )
+    for dataset in [
+        "spider",
+        "bird",
+        "spider_syn",
+        "spider_realistic",
+        "fiben",
+        "wikisql",
+    ]:
         for resolution in ["database", "table", "all_table"]:
-            retrieve_schemas(dataset, resolution)
+            result = retrieve_schemas(dataset, resolution)
+            table.add_row(dataset, resolution, *map(str, result.values()))
+
+    console.print(table)
