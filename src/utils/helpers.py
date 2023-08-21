@@ -1,3 +1,4 @@
+import random
 from collections import Counter
 from typing import Iterable, Iterator
 
@@ -9,7 +10,9 @@ def chunks(lst: Iterable, n: int) -> Iterator[Iterable]:
         yield lst[i : i + n]
 
 
-def schema2label(schema: dict, separator: str, add_db: bool = True) -> str:
+def schema2label(
+    schema: dict, separator: str, add_db: bool = True, shuffle: bool = True
+) -> str:
     """
     Transform a dict of database schema into a string of labels.
 
@@ -28,7 +31,10 @@ def schema2label(schema: dict, separator: str, add_db: bool = True) -> str:
     assert separator not in schema["database"]
     assert all(separator not in t["name"] for t in schema["metadata"])
 
-    tables = separator.join(t["name"] for t in schema["metadata"])
+    tables = [t["name"] for t in schema["metadata"]]
+    if shuffle:
+        random.shuffle(tables)
+    tables = separator.join(tables)
     return f"{schema['database']}{separator}{tables}" if add_db else tables
 
 
