@@ -25,8 +25,8 @@ class SchemaRouting(pl.LightningModule):
         generator_config: dict = {
             "max_new_tokens": 512,
         },
-        separator: str = "< >",
         *,
+        sep_token: str = "<sep>",
         max_length: int = 512,
         weight_decay: float = 0.0,
         learning_rate: float = 2e-5,
@@ -42,8 +42,8 @@ class SchemaRouting(pl.LightningModule):
         self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name_or_path)
         self.generator_config = generator_config
 
-        num_added = self.tokenizer.add_tokens([separator], special_tokens=True)
-        if num_added > 0:
+        if self.tokenizer.sep_token is None:
+            self.tokenizer.add_special_tokens({"sep_token": sep_token})
             self.model.resize_token_embeddings(len(self.tokenizer))
 
         self.collate_fn = DataCollatorForSeq2Seq(
@@ -89,7 +89,7 @@ class SchemaRouting(pl.LightningModule):
         ]
         _label2schema = partial(
             label2schema,
-            separator=self.hparams.separator,
+            separator=self.tokenizer.sep_token,
             add_db=self.trainer.datamodule.hparams.add_db,
             tbl2db=self.trainer.datamodule.tbl2db,
         )
