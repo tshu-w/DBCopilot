@@ -16,10 +16,10 @@ from src.utils.helpers import schema2label
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
-def preprocess(batch, tokenizer, max_length):
+def preprocess(batch, tokenizer, max_length, add_db):
     inputs, targets = [], []
     for question, schema in zip(batch["question"], batch["schema"]):
-        target = schema2label(schema, tokenizer.sep_token)
+        target = schema2label(schema, separator=tokenizer.sep_token, add_db=add_db)
         targets.append(target)
 
         if question is None:
@@ -107,6 +107,7 @@ class Text2Schema(pl.LightningDataModule):
                 preprocess,
                 tokenizer=self.trainer.model.tokenizer,
                 max_length=self.trainer.model.hparams.max_length,
+                add_db=self.hparams.add_db,
             )
             self.datasets = datasets.map(
                 _preprocess,
