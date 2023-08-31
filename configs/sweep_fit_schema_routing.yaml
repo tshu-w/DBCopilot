@@ -6,6 +6,7 @@ fit:
   data_configs:
     - configs/spider.yaml
     - configs/bird.yaml
+    - configs/fiben.yaml
   override_kwargs:
     seed_everything:
       - 123

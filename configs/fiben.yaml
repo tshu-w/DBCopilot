@@ -1,0 +1,7 @@
+data:
+  class_path: src.datamodules.Text2Schema
+  init_args:
+    dataset: fiben
+    batch_size: 32
+    num_workers: 8
+    pin_memory: true
