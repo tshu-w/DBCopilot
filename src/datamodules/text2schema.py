@@ -3,7 +3,7 @@ import os
 from collections import defaultdict
 from functools import partial
 from pathlib import Path
-from typing import Literal, Optional, Union
+from typing import Optional, Union
 
 import lightning.pytorch as pl
 import pandas as pd
@@ -43,7 +43,7 @@ def preprocess(batch, tokenizer, max_length, add_db):
 class Text2Schema(pl.LightningDataModule):
     def __init__(
         self,
-        dataset: Literal["spider", "bird"] = "spider",
+        dataset: str = "spider",
         pseudo: Union[bool, str] = True,
         add_db: bool = True,
         *,
@@ -62,7 +62,7 @@ class Text2Schema(pl.LightningDataModule):
             **{
                 "test"
                 if f.parent.stem == dataset
-                else f"test_{f.parent.stem[len(dataset) + 1:]}": [str(f)]
+                else f"test_{f.parent.stem[len(dataset):]}": [str(f)]
                 for f in sorted(Path("data").glob(f"{dataset}*/test.json"))
             },
         }
