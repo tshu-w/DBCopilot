@@ -13,7 +13,7 @@ from src.utils.helpers import schema2desc
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
-def preprocess(batch, tokenizer, max_length):
+def preprocess(batch, tokenizer, max_length, s2q):
     inputs, targets = [], []
     for schema in batch["schema"]:
         input = f"Ask a question for the database with the following schema.\n{schema2desc(schema)}"
@@ -23,12 +23,30 @@ def preprocess(batch, tokenizer, max_length):
         for question in batch["question"]:
             targets.append(question)
 
-    features = tokenizer(
-        text=inputs,
-        text_target=targets or None,
-        max_length=max_length,
-        truncation=True,
-    )
+    if s2q:
+        features = tokenizer(
+            text=inputs,
+            text_target=targets or None,
+            max_length=max_length,
+            truncation=True,
+        )
+    else:
+        targets = [f"{s}\n{t}" for s, t in zip(inputs, targets)]
+        features = tokenizer(
+            text=targets,
+            text_target=targets or None,
+            max_length=max_length,
+            truncation=True,
+        )
+        source_lens = tokenizer(
+            text=inputs,
+            text_target=targets or None,
+            max_length=max_length,
+            truncation=True,
+            return_length=True,
+        )["length"]
+        for label, source_len in zip(features["labels"], source_lens):
+            label[:source_len] = [-100] * source_len
 
     return features
 
@@ -77,6 +95,7 @@ class Schema2Text(pl.LightningDataModule):
                 preprocess,
                 tokenizer=self.trainer.model.tokenizer,
                 max_length=self.trainer.model.hparams.max_length,
+                s2q=self.trainer.model.s2q,
             )
             self.datasets = datasets.map(
                 _preprocess,

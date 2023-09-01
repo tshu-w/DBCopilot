@@ -3,7 +3,9 @@ from typing import Optional
 import lightning.pytorch as pl
 import torch
 from lightning.pytorch.utilities.types import STEP_OUTPUT
+from peft import get_peft_config, get_peft_model
 from transformers import (
+    AutoModelForCausalLM,
     AutoModelForSeq2SeqLM,
     AutoTokenizer,
     DataCollatorForSeq2Seq,
@@ -15,6 +17,7 @@ class Schema2Query(pl.LightningModule):
     def __init__(
         self,
         model_name_or_path: str,
+        peft_config: Optional[dict] = None,
         generator_config: dict = {
             "max_new_tokens": 512,
         },
@@ -31,8 +34,21 @@ class Schema2Query(pl.LightningModule):
         self.tokenizer = AutoTokenizer.from_pretrained(
             model_name_or_path, verbose=False
         )
-        self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name_or_path)
+        try:
+            self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name_or_path)
+            self.s2q = True
+        except ValueError:
+            self.model = AutoModelForCausalLM.from_pretrained(model_name_or_path)
+            self.s2q = False
+
+        if peft_config is not None:
+            peft_config = get_peft_config(peft_config)
+            self.model = get_peft_model(self.model, peft_config)
+            self.model.print_trainable_parameters()
         self.generator_config = generator_config
+
+        if self.tokenizer.pad_token_id is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
 
         self.collate_fn = DataCollatorForSeq2Seq(
             tokenizer=self.tokenizer, model=self.model
