@@ -52,7 +52,7 @@ def schema2desc(schema: dict) -> str:
     }
 
     Output:
-    <database_name>:
+    <database_name>
     - <table_name_1> (<column_name_1>, <column_name_2>)
     - <table_name_2> (<column_name_1>, <column_name_2>, <column_name_3>)
     - <table_name_3> (<column_name_1>)
@@ -60,7 +60,7 @@ def schema2desc(schema: dict) -> str:
     tables = "\n".join(
         f"  - {t['name']} ({', '.join(t['columns'])})" for t in schema["metadata"]
     )
-    return f"{schema['database']}:\n{tables}"
+    return f"{schema['database']}\n{tables}"
 
 
 def label2schema(
