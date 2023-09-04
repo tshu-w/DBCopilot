@@ -93,7 +93,7 @@ class Schema2Query(pl.LightningModule):
             {
                 "params": [
                     p
-                    for n, p in self.named_parameters()
+                    for n, p in self.trainer.model.named_parameters()
                     if not any(nd in n for nd in no_decay)
                 ],
                 "weight_decay": self.hparams.weight_decay,
@@ -101,7 +101,7 @@ class Schema2Query(pl.LightningModule):
             {
                 "params": [
                     p
-                    for n, p in self.named_parameters()
+                    for n, p in self.trainer.model.named_parameters()
                     if any(nd in n for nd in no_decay)
                 ],
                 "weight_decay": 0.0,
