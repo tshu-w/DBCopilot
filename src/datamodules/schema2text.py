@@ -13,17 +13,18 @@ from src.utils.helpers import schema2desc
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
-def preprocess(batch, tokenizer, max_length, s2q):
+def preprocess(batch, tokenizer, max_length, s2s):
     inputs, targets = [], []
     for schema in batch["schema"]:
-        input = f"Ask a question for the database with the following schema.\n{schema2desc(schema)}"
-        inputs.append(input)
+        inpt = f"{schema2desc(schema)}\n\n-- Instruction: Ask a question for the database with schemas provided above.\n\n-- Question:"
+        inputs.append(inpt)
 
     if "question" in batch:
-        for question in batch["question"]:
-            targets.append(question)
+        targets = [question for question in batch["question"]]
+    else:
+        targets = [""] * len(inputs)
 
-    if s2q:
+    if s2s:
         features = tokenizer(
             text=inputs,
             text_target=targets or None,
@@ -31,7 +32,7 @@ def preprocess(batch, tokenizer, max_length, s2q):
             truncation=True,
         )
     else:
-        targets = [f"{s}\n{t}" for s, t in zip(inputs, targets)]
+        targets = [f"{s}{t}{tokenizer.eos_token}" for s, t in zip(inputs, targets)]
         features = tokenizer(
             text=targets,
             text_target=targets or None,
@@ -40,7 +41,6 @@ def preprocess(batch, tokenizer, max_length, s2q):
         )
         source_lens = tokenizer(
             text=inputs,
-            text_target=targets or None,
             max_length=max_length,
             truncation=True,
             return_length=True,
@@ -95,7 +95,7 @@ class Schema2Text(pl.LightningDataModule):
                 preprocess,
                 tokenizer=self.trainer.model.tokenizer,
                 max_length=self.trainer.model.hparams.max_length,
-                s2q=self.trainer.model.s2q,
+                s2s=self.trainer.model.s2s,
             )
             self.datasets = datasets.map(
                 _preprocess,
