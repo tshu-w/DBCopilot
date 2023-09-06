@@ -13,7 +13,7 @@ from src.utils.helpers import schema2desc
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
-def preprocess(batch, tokenizer, max_length, s2s):
+def preprocess(batch, tokenizer, max_length, mode):
     inputs, targets = [], []
     for schema in batch["schema"]:
         inpt = f"{schema2desc(schema)}\n\n-- Instruction: Ask a question for the database with schemas provided above.\n\n-- Question:"
@@ -24,7 +24,7 @@ def preprocess(batch, tokenizer, max_length, s2s):
     else:
         targets = [""] * len(inputs)
 
-    if s2s:
+    if mode == "seq2seq":
         features = tokenizer(
             text=inputs,
             text_target=targets or None,
@@ -95,7 +95,7 @@ class Schema2Text(pl.LightningDataModule):
                 preprocess,
                 tokenizer=self.trainer.model.tokenizer,
                 max_length=self.trainer.model.hparams.max_length,
-                s2s=self.trainer.model.s2s,
+                mode=self.trainer.model.mode,
             )
             self.datasets = datasets.map(
                 _preprocess,

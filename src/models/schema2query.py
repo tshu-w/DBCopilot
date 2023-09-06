@@ -36,10 +36,10 @@ class Schema2Query(pl.LightningModule):
         )
         try:
             self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name_or_path)
-            self.s2s = True
+            self.mode = "seq2seq"
         except ValueError:
             self.model = AutoModelForCausalLM.from_pretrained(model_name_or_path)
-            self.s2s = False
+            self.mode = "causal"
 
         if peft_config is not None:
             peft_config = get_peft_config(peft_config)
@@ -84,7 +84,7 @@ class Schema2Query(pl.LightningModule):
 
     def predict_step(self, batch, batch_idx: int, dataloader_idx: int = 0):
         outputs = self.model.generate(**batch, **self.hparams.generator_config)
-        if not self.s2s:
+        if self.mode != "seq2seq":
             outputs = [opt[len(ipt) :] for ipt, opt in zip(batch["input_ids"], outputs)]
 
         pred_texts = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
