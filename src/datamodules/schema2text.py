@@ -16,7 +16,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 def preprocess(batch, tokenizer, max_length, mode):
     inputs, targets = [], []
     for schema in batch["schema"]:
-        inpt = f"{schema2desc(schema)}\n\n-- Instruction: Ask a question for the database with schemas provided above.\n\n-- Question:"
+        inpt = f"{schema2desc(schema)}\n\n-- Instruction: Ask a question for the database with schemas provided above.\n\n-- Question: "
         inputs.append(inpt)
 
     if "question" in batch:
@@ -32,7 +32,10 @@ def preprocess(batch, tokenizer, max_length, mode):
             truncation=True,
         )
     else:
-        targets = [f"{s}{t}{tokenizer.eos_token}" for s, t in zip(inputs, targets)]
+        targets = [
+            f"{s}{t}{tokenizer.eos_token}" if t else f"{s}"
+            for s, t in zip(inputs, targets)
+        ]
         features = tokenizer(
             text=targets,
             text_target=targets or None,
