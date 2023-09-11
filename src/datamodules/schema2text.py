@@ -1,7 +1,6 @@
 import os
 from functools import partial
 from pathlib import Path
-from typing import Optional
 
 import lightning.pytorch as pl
 from datasets import load_dataset
@@ -83,7 +82,7 @@ class Schema2Text(pl.LightningDataModule):
         # setup first to prevent datasets cache conflicts in multiple processes.
         self.setup()
 
-    def setup(self, stage: Optional[str] = None) -> None:
+    def setup(self, stage: str | None = None) -> None:
         if not hasattr(self, "datasets"):
             datasets = load_dataset("json", data_files=self.data_files)
 

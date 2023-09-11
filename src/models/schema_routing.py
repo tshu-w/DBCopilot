@@ -2,7 +2,6 @@ import json
 from collections import defaultdict
 from functools import partial
 from pathlib import Path
-from typing import Optional
 
 import lightning.pytorch as pl
 import torch
@@ -77,7 +76,7 @@ class SchemaRouting(pl.LightningModule):
 
     def evaluation_step(
         self, batch, step: str, dataloader_idx: int = 0
-    ) -> Optional[STEP_OUTPUT]:
+    ) -> STEP_OUTPUT | None:
         batch.pop("decoder_input_ids", None)
 
         outputs = self.model.generate(**batch, **self.generator_config)
@@ -124,12 +123,12 @@ class SchemaRouting(pl.LightningModule):
 
         return loss
 
-    def validation_step(self, batch, batch_idx: int) -> Optional[STEP_OUTPUT]:
+    def validation_step(self, batch, batch_idx: int) -> STEP_OUTPUT | None:
         return self.evaluation_step(batch, step="val")
 
     def test_step(
         self, batch, batch_idx: int, dataloader_idx: int = 0
-    ) -> Optional[STEP_OUTPUT]:
+    ) -> STEP_OUTPUT | None:
         return self.evaluation_step(batch, step="test", dataloader_idx=dataloader_idx)
 
     def update_metrics(

@@ -1,6 +1,6 @@
 import random
 from collections import Counter
-from typing import Iterable, Iterator
+from collections.abc import Iterable, Iterator
 
 
 def chunks(lst: Iterable, n: int) -> Iterator[Iterable]:

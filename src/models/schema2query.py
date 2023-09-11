@@ -1,5 +1,3 @@
-from typing import Optional
-
 import lightning.pytorch as pl
 import torch
 from lightning.pytorch.utilities.types import STEP_OUTPUT
@@ -17,7 +15,7 @@ class Schema2Query(pl.LightningModule):
     def __init__(
         self,
         model_name_or_path: str,
-        peft_config: Optional[dict] = None,
+        peft_config: dict | None = None,
         generator_config: dict = {
             "max_new_tokens": 512,
         },
@@ -68,7 +66,7 @@ class Schema2Query(pl.LightningModule):
 
         return loss
 
-    def validation_step(self, batch, batch_idx: int) -> Optional[STEP_OUTPUT]:
+    def validation_step(self, batch, batch_idx: int) -> STEP_OUTPUT | None:
         loss = self.common_step(batch)
         self.log("val/loss", loss, prog_bar=True)
 
@@ -76,7 +74,7 @@ class Schema2Query(pl.LightningModule):
 
     def test_step(
         self, batch, batch_idx: int, dataloader_idx: int = 0
-    ) -> Optional[STEP_OUTPUT]:
+    ) -> STEP_OUTPUT | None:
         loss = self.common_step(batch)
         self.log("test/loss", loss, prog_bar=True)
 

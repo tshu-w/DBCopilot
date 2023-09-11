@@ -3,7 +3,6 @@ import os
 from collections import defaultdict
 from functools import partial
 from pathlib import Path
-from typing import Optional, Union
 
 import lightning.pytorch as pl
 import pandas as pd
@@ -44,7 +43,7 @@ class Text2Schema(pl.LightningDataModule):
     def __init__(
         self,
         dataset: str = "spider",
-        pseudo: Union[bool, str] = True,
+        pseudo: bool | str = True,
         add_db: bool = True,
         *,
         preprocessing_num_workers: int = None,
@@ -74,7 +73,7 @@ class Text2Schema(pl.LightningDataModule):
         # setup first to prevent datasets cache conflicts in multiple processes.
         self.setup()
 
-    def setup(self, stage: Optional[str] = None) -> None:
+    def setup(self, stage: str | None = None) -> None:
         if not hasattr(self, "datasets"):
             datasets = load_dataset("json", data_files=self.data_files)
 

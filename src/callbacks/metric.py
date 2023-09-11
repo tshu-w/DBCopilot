@@ -1,7 +1,6 @@
 import json
 import logging
 from pathlib import Path
-from typing import Optional
 
 import lightning.pytorch as pl
 from lightning.fabric.utilities.apply_func import convert_tensors_to_scalars
@@ -17,7 +16,7 @@ class Metric(pl.Callback):
         self,
         trainer: pl.Trainer,
         pl_module: pl.LightningModule,
-        stage: Optional[str] = None,
+        stage: str | None = None,
     ) -> None:
         metrics = {}
         if stage == TrainerFn.FITTING:

@@ -4,7 +4,7 @@ import math
 import os
 import shlex
 from pathlib import Path
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal
 from unittest.mock import patch
 
 import ray
@@ -62,11 +62,11 @@ def run_cli(config, debug: bool = True, command: str = "fit", devices: int = 1):
 def sweep(
     command: Literal["fit", "validate", "test"],
     debug: bool = False,
-    gpus_per_trial: Union[int, float] = 1,
+    gpus_per_trial: int | float = 1,
     *,
-    ckpt_paths: list[Optional[str]] = [None],
+    ckpt_paths: list[str | None] = [None],
     configs: list[str] = [],
-    data_configs: list[Optional[str]] = [],
+    data_configs: list[str | None] = [],
     override_kwargs: dict[str, Any] = {},
 ):
     param_space = {
