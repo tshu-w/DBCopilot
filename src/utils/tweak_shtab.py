@@ -177,7 +177,7 @@ def complete_zsh(parser, root_prefix=None, preamble="", choice_functions=None):
             cases.append(fmt.format(name=options["cmd"], prefix=prefix))
         cases = "\n\t".expandtabs(8).join(cases)
 
-        return """\
+        return f"""\
 {prefix}() {{
   local context state line curcontext="$curcontext"
   _arguments -C ${prefix}_options \\
@@ -193,9 +193,7 @@ def complete_zsh(parser, root_prefix=None, preamble="", choice_functions=None):
       esac
   esac
 }}
-""".format(
-            prefix=prefix, name=name, cases=cases
-        )
+"""
 
     def command_option(prefix, options):
         return """\
@@ -212,24 +210,20 @@ def complete_zsh(parser, root_prefix=None, preamble="", choice_functions=None):
             '"{}:{}"'.format(cmd, escape_zsh(opt["help"]))
             for cmd, opt in sorted(options["commands"].items())
         )
-        return """
+        return f"""
 {prefix}_commands() {{
   local _commands=(
     {commands}
   )
   _describe '{name} commands' _commands
-}}""".format(
-            prefix=prefix, name=name, commands=commands
-        )
+}}"""
 
     preamble = (
-        """\
+        f"""\
 # Custom Preamble
-{}
+{preamble.rstrip()}
 # End Custom Preamble
-""".format(
-            preamble.rstrip()
-        )
+"""
         if preamble
         else ""
     )
