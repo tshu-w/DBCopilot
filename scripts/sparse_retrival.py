@@ -1,9 +1,9 @@
 import json
+from operator import itemgetter
 from pathlib import Path
 from typing import Literal
 
 import numpy as np
-import wordninja
 from ranx import Qrels, Run, evaluate
 from retriv import SparseRetriever
 from rich.console import Console
@@ -16,18 +16,19 @@ def generate_collection(schemas, resolution) -> dict[str, str]:
             for tbl in tables:
                 for col in tbl["columns"]:
                     doc = {
-                        "id": f"{db}.{tbl['name']}.{col}",
-                        "text": f"{db} {tbl['name']} {col}",
+                        "id": f"{db}.{tbl['name']}.{col['name']}",
+                        "text": f"{db} {tbl['name']} {col['name']}",
                     }
                     yield doc
         elif resolution == "table":
             for tbl in tables:
-                text = f"{db} {tbl['name']} {' '.join(tbl['columns'])}"
+                text = f"{db} {tbl['name']} {' '.join(map(itemgetter('name'), tbl['columns']))}"
                 doc = {"id": f"{db}.{tbl['name']}", "text": text}
                 yield doc
         elif resolution == "database":
             text = " ".join(
-                f"{tbl['name']} {' '.join(tbl['columns'])}" for tbl in tables
+                f"{tbl['name']} {' '.join(map(itemgetter('name'), tbl['columns']))}"
+                for tbl in tables
             )
             text = f"{db} {text}"
             doc = {"id": db, "text": text}
@@ -74,7 +75,7 @@ def retrieve_schemas(
             show_progress=False,
             callback=lambda x: {
                 "id": x["id"],
-                "text": " ".join(wordninja.split(x["text"])),
+                "text": x["text"],
             },
         )
         if not isinstance(retriever.relative_doc_lens, np.ndarray):
