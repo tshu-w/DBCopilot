@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import ray
 from jsonargparse import CLI
-from ray import air, tune
+from ray import train, tune
 
 from src.utils.lit_cli import lit_cli
 
@@ -80,10 +80,9 @@ def sweep(
     }
 
     tune_config = tune.TuneConfig()
-    run_config = air.RunConfig(
+    run_config = train.RunConfig(
         log_to_file=True,
-        storage_path="results/ray",
-        verbose=1,
+        storage_path=Path("./results/ray").resolve(),
     )
     trainable = tune.with_parameters(
         run_cli,
