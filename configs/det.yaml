@@ -7,11 +7,11 @@ environment:
     - PATH=/home/tianshu2020/.local/share/conda/envs/schema-routing/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 bind_mounts:
-  - host_path: /ceph_home/tianshu2020/resources/data/schema-routing/
+  - host_path: /ceph_home/tianshu2020/resources/data/dbcopilot/
     container_path: /run/determined/workdir/data
   - host_path: /ceph_home/tianshu2020/resources/models
     container_path: /run/determined/workdir/models
-  - host_path: /ceph_home/tianshu2020/resources/results/schema-routing/
+  - host_path: /ceph_home/tianshu2020/resources/results/dbcopilot/
     container_path: /run/determined/workdir/results
   - host_path: /ceph_home/tianshu2020
     container_path: /home/tianshu2020
