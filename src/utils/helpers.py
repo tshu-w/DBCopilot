@@ -1,6 +1,9 @@
+import itertools
 import random
-from collections import Counter
+from collections import Counter, defaultdict
 from collections.abc import Iterable, Iterator
+
+import networkx as nx
 
 
 def chunks(lst: Iterable, n: int) -> Iterator[Iterable]:
@@ -8,6 +11,27 @@ def chunks(lst: Iterable, n: int) -> Iterator[Iterable]:
     size = lst.shape[0] if hasattr(lst, "shape") else len(lst)
     for i in range(0, size, n):
         yield lst[i : i + n]
+
+
+def schema2graph(schemas: dict) -> nx.DiGraph:
+    G = nx.DiGraph()
+    links = defaultdict(set)
+
+    for database, tables in schemas.items():
+        G.add_edge("source", database)
+        for table in tables:
+            G.add_edge(database, table["name"])
+            for column in table["columns"]:
+                foreign_key = column.get("foreign_key", None)
+                if foreign_key:
+                    key = f"{foreign_key['table']}.{foreign_key['column']}"
+                    links[key].update([foreign_key["table"], table["name"]])
+
+    for tables in links.values():
+        for tbl1, tbl2 in itertools.product(tables, tables):
+            G.add_edge(tbl1, tbl2)
+
+    return G
 
 
 def schema2label(

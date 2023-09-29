@@ -12,14 +12,14 @@ scikit-learn
 datasets
 evaluate
 
+func-timeout
 guidance
+nltk
 pandas
 retriv
-sqlparse
-nltk
 sqlglot
+sqlparse
 tenacity
-func-timeout
 wordninja
 
 # dev tools
