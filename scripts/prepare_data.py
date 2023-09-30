@@ -199,7 +199,14 @@ def bird(ds_path=RAW_DATA_PATH / "bird", tgt_path=TGT_PATH / "bird"):
                     "metadata": metadata,
                 }
                 record["sql"] = record.pop("SQL")
-                for key in ["question_toks", "SQL_toks", "evidence_toks", "evidence"]:
+                for key in [
+                    "question_toks",
+                    "SQL_toks",
+                    "evidence_toks",
+                    "evidence",
+                    "question_id",
+                    "difficulty",
+                ]:
                     record.pop(key, None)
             except Exception:
                 data.remove(record)
