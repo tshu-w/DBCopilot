@@ -184,6 +184,32 @@ def spider_realistic(
     write_data(tgt_path / "test.json", dev_data)
 
 
+def dr_spider(
+    ds_path=RAW_DATA_PATH / "diagnostic-robustness-text-to-sql",
+    tgt_path=TGT_PATH / "spider_dr",
+):
+    databases = get_dataset_schemas("spider")
+    tgt_path.mkdir(exist_ok=True, parents=True)
+    write_data(tgt_path / "schemas.json", databases)
+
+    def convert_data(data):
+        for record in tqdm(data):
+            metadata = extract_metadata(record["query"], databases[record["db_id"]])
+            record["schema"] = {
+                "database": record.pop("db_id"),
+                "metadata": metadata,
+            }
+            record["sql"] = record.pop("query")
+            for key in ["query_toks", "query_toks_no_value", "question_toks"]:
+                record.pop(key, None)
+
+    for dir in (ds_path / "data").iterdir():
+        if dir.name.startswith(("NLQ_", "SQL_")):
+            dev_data = load_data(dir / "questions_post_perturbation.json")
+            convert_data(dev_data)
+            write_data(tgt_path / f"test_{dir.name.lower()}.json", dev_data)
+
+
 def bird(ds_path=RAW_DATA_PATH / "bird", tgt_path=TGT_PATH / "bird"):
     databases = get_dataset_schemas("bird")
     tgt_path.mkdir(exist_ok=True, parents=True)
@@ -306,6 +332,7 @@ if __name__ == "__main__":
     spider()
     spider_syn()
     spider_realistic()
+    dr_spider()
     bird()
     fiben()
     wikisql()
