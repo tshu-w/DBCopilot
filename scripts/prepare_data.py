@@ -1,4 +1,5 @@
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -10,6 +11,7 @@ sys.path.append(str(Path(__file__).parents[1]))
 
 RAW_DATA_PATH = Path("./data/raw")
 TGT_PATH = Path("./data/")
+COPY_DATABASES = True
 
 
 def load_data(file_path: Path | list[Path]) -> list[dict]:
@@ -120,6 +122,11 @@ def spider(ds_path=RAW_DATA_PATH / "spider", tgt_path=TGT_PATH / "spider"):
     tgt_path.mkdir(exist_ok=True, parents=True)
     write_data(tgt_path / "schemas.json", databases)
 
+    if COPY_DATABASES:
+        shutil.copytree(
+            ds_path / "database", tgt_path / "databases", dirs_exist_ok=True
+        )
+
     def convert_data(data):
         for record in tqdm(data):
             metadata = extract_metadata(record["query"], databases[record["db_id"]])
@@ -221,6 +228,18 @@ def bird(ds_path=RAW_DATA_PATH / "bird", tgt_path=TGT_PATH / "bird"):
     tgt_path.mkdir(exist_ok=True, parents=True)
     write_data(tgt_path / "schemas.json", databases)
 
+    if COPY_DATABASES:
+        shutil.copytree(
+            ds_path / "train" / "train_databases",
+            tgt_path / "databases",
+            dirs_exist_ok=True,
+        )
+        shutil.copytree(
+            ds_path / "dev" / "dev_databases",
+            tgt_path / "databases",
+            dirs_exist_ok=True,
+        )
+
     def convert_data(data):
         for record in tqdm(data[:]):
             db_id = record["db_id"]
@@ -260,6 +279,11 @@ def fiben(
     tgt_path.mkdir(exist_ok=True, parents=True)
     write_data(tgt_path / "schemas.json", databases)
 
+    if COPY_DATABASES:
+        shutil.copytree(
+            ds_path / "database", tgt_path / "databases", dirs_exist_ok=True
+        )
+
     def convert_data(data):
         for record in tqdm(data[:]):
             try:
@@ -296,6 +320,11 @@ def wikisql(
     databases = get_dataset_schemas("wikisql")
     tgt_path.mkdir(exist_ok=True, parents=True)
     write_data(tgt_path / "schemas.json", databases)
+
+    if COPY_DATABASES:
+        shutil.copytree(
+            ds_path / "database", tgt_path / "databases", dirs_exist_ok=True
+        )
 
     def convert_data(data):
         for record in tqdm(data[:]):
