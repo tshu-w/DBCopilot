@@ -85,13 +85,19 @@ def get_dataset_schemas(dataset) -> dict:
             table["name"] = db["table_names"][i]
             table["original_name"] = db["table_names_original"][i]
             table["columns"] = []
+            primary_keys = []
+            for v in db["primary_keys"]:
+                if isinstance(v, list):
+                    primary_keys.extend(v)
+                else:
+                    primary_keys.append(v)
             for j in range(len(db["column_names"])):
                 if db["column_names"][j][0] == i:
                     column = {}
                     column["name"] = db["column_names"][j][1]
                     column["original_name"] = db["column_names_original"][j][1]
                     column["type"] = db["column_types"][j - type_offset]
-                    if j in db["primary_keys"]:
+                    if j in primary_keys:
                         column["primary_key"] = True
 
                     for left, right in db["foreign_keys"]:
@@ -320,12 +326,20 @@ def wikisql(
     write_data(tgt_path / "train.json", train_data)
 
     dev_data = []
-    with (ds_path / "test.jsonl").open() as f:
+    with (ds_path / "dev.jsonl").open() as f:
         for line in f:
             dev_data.append(json.loads(line))
 
     convert_data(dev_data)
-    write_data(tgt_path / "test.json", dev_data)
+    write_data(tgt_path / "dev.json", dev_data)
+
+    test_data = []
+    with (ds_path / "test.jsonl").open() as f:
+        for line in f:
+            test_data.append(json.loads(line))
+
+    convert_data(test_data)
+    write_data(tgt_path / "test.json", test_data)
 
 
 if __name__ == "__main__":
