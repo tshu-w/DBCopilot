@@ -44,7 +44,7 @@ def schema2graph(schemas: dict) -> nx.DiGraph:
 
 
 def serialize_schema(
-    schema: dict, G: nx.DiGraph, separator: str, shuffle: bool = False
+    schema: dict, G: nx.DiGraph, separator: str, shuffle: bool = True
 ) -> str:
     """
     Serialize a schema into a depth-first-search pre-order sequence of graph G.
@@ -66,11 +66,8 @@ def serialize_schema(
 
     nodes = {
         snode,
-        Node(schema["database"], "database"),
-        *[
-            Node(f'{schema["database"]}.{t["name"]}', "table")
-            for t in schema["metadata"]
-        ],
+        Node(schema["database"], "source"),
+        *[Node(t["name"], schema["database"]) for t in schema["metadata"]],
     }
     stack = [snode]
     visited = []
@@ -83,7 +80,8 @@ def serialize_schema(
         children = [
             child for child in list(G[node]) if child in nodes and child not in visited
         ]
-        children = random.shuffle(children) if shuffle else children
+        if shuffle:
+            random.shuffle(children)
         stack.extend(children)
     else:
         print(schema)
@@ -144,6 +142,31 @@ def deserialize_schema(s: str, separator: dict) -> dict:
     return schema
 
 
+def stringize_schema(schema: dict) -> dict:
+    """
+    Stringize a dict of database schema.
+
+    Input: {
+      "database": "<database_name>",
+      "metadata": [
+        {"name": "<table_name_1>", "columns": ["<column_name_1>", "<column_name_2>"]},
+        {"name": "<table_name_2>", "columns": ["<column_name_1>", "<column_name_2>", "<column_name_3>"]},
+        {"name": "<table_name_3>", "columns": ["<column_name_1>"]}
+      ]
+    }
+
+    Output:
+    <database_name>
+    - <table_name_1> (<column_name_1>, <column_name_2>)
+    - <table_name_2> (<column_name_1>, <column_name_2>, <column_name_3>)
+    - <table_name_3> (<column_name_1>)
+    """
+    tables = "\n".join(
+        f"- {t['name']} ({', '.join(t['columns'])})" for t in schema["metadata"]
+    )
+    return f"{schema['database']}\n{tables}"
+
+
 def schema2label(
     schema: dict, separator: str, add_db: bool = True, shuffle: bool = True
 ) -> str:
@@ -170,31 +193,6 @@ def schema2label(
         random.shuffle(tables)
     tables = separator.join(tables)
     return f"{schema['database']}{separator}{tables}" if add_db else tables
-
-
-def schema2desc(schema: dict) -> str:
-    """
-    Transform a dict of database schema into a description.
-
-    Input: {
-      "database": "<database_name>",
-      "metadata": [
-        {"name": "<table_name_1>", "columns": ["<column_name_1>", "<column_name_2>"]},
-        {"name": "<table_name_2>", "columns": ["<column_name_1>", "<column_name_2>", "<column_name_3>"]},
-        {"name": "<table_name_3>", "columns": ["<column_name_1>"]}
-      ]
-    }
-
-    Output:
-    <database_name>
-    - <table_name_1> (<column_name_1>, <column_name_2>)
-    - <table_name_2> (<column_name_1>, <column_name_2>, <column_name_3>)
-    - <table_name_3> (<column_name_1>)
-    """
-    tables = "\n".join(
-        f"  - {t['name']} ({', '.join(t['columns'])})" for t in schema["metadata"]
-    )
-    return f"{schema['database']}\n{tables}"
 
 
 def label2schema(

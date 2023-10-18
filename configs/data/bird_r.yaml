@@ -1,0 +1,7 @@
+data:
+  class_path: src.datamodules.Schema2Text
+  init_args:
+    dataset: bird
+    batch_size: 32
+    num_workers: 8
+    pin_memory: true

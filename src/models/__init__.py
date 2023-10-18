@@ -1,4 +1,4 @@
-from .schema2query import Schema2Query
+from .schema_questioning import SchemaQuestioning
 from .schema_routing import SchemaRouting
 
-__all__ = ["SchemaRouting", "Schema2Query"]
+__all__ = ["SchemaRouting", "SchemaQuestioning"]

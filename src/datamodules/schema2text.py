@@ -1,56 +1,9 @@
-import os
-from functools import partial
 from pathlib import Path
 
 import lightning.pytorch as pl
 from datasets import load_dataset
 from lightning.pytorch.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
 from torch.utils.data import DataLoader
-
-from src.utils.helpers import schema2desc
-
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-
-def preprocess(batch, tokenizer, max_length, mode):
-    inputs, targets = [], []
-    for schema in batch["schema"]:
-        inpt = f"{schema2desc(schema)}\n\n-- Instruction: Ask a question for the database with schemas provided above.\n\n-- Question: "
-        inputs.append(inpt)
-
-    if "question" in batch:
-        targets = [question for question in batch["question"]]
-    else:
-        targets = [""] * len(inputs)
-
-    if mode == "seq2seq":
-        features = tokenizer(
-            text=inputs,
-            text_target=targets or None,
-            max_length=max_length,
-            truncation=True,
-        )
-    else:
-        targets = [
-            f"{s}{t}{tokenizer.eos_token}" if t else f"{s}"
-            for s, t in zip(inputs, targets)
-        ]
-        features = tokenizer(
-            text=targets,
-            text_target=targets or None,
-            max_length=max_length,
-            truncation=True,
-        )
-        source_lens = tokenizer(
-            text=inputs,
-            max_length=max_length,
-            truncation=True,
-            return_length=True,
-        )["length"]
-        for label, source_len in zip(features["labels"], source_lens):
-            label[:source_len] = [-100] * source_len
-
-    return features
 
 
 class Schema2Text(pl.LightningDataModule):
@@ -66,10 +19,15 @@ class Schema2Text(pl.LightningDataModule):
         super().__init__()
         self.save_hyperparameters()
         self.dataset = dataset
+        train_files = list(
+            map(str, sorted(Path("data").glob(f"{dataset}*/train.json")))
+        )
+        for i, f in enumerate(train_files):
+            if f == "data/wikisql/train.json":
+                train_files[i] = "data/wikisql/dev.json"
+
         self.data_files = {
-            "train": list(
-                map(str, sorted(Path("data").glob(f"{dataset}*/train.json")))
-            ),
+            "train": train_files,
             **{
                 "test"
                 if f.parent.stem == dataset
@@ -84,32 +42,18 @@ class Schema2Text(pl.LightningDataModule):
 
     def setup(self, stage: str | None = None) -> None:
         if not hasattr(self, "datasets"):
-            datasets = load_dataset("json", data_files=self.data_files)
+            self.datasets = load_dataset("json", data_files=self.data_files)
 
-            if "validation" not in datasets:
-                datasets_split = datasets["train"].train_test_split(
+            if "validation" not in self.datasets:
+                datasets_split = self.datasets["train"].train_test_split(
                     test_size=0.1, shuffle=True
                 )
-                datasets["train"] = datasets_split["train"]
-                datasets["validation"] = datasets_split["test"]
-
-            _preprocess = partial(
-                preprocess,
-                tokenizer=self.trainer.model.tokenizer,
-                max_length=self.trainer.model.hparams.max_length,
-                mode=self.trainer.model.mode,
-            )
-            self.datasets = datasets.map(
-                _preprocess,
-                batched=True,
-                remove_columns=datasets["train"].column_names,
-                num_proc=self.hparams.preprocessing_num_workers,
-                load_from_cache_file=False,
-            )
+                self.datasets["train"] = datasets_split["train"]
+                self.datasets["validation"] = datasets_split["test"]
 
             self.test_splits = [x for x in self.datasets.keys() if "test" in x]
 
-        self.collate_fn = getattr(self.trainer.model, "collate_fn", None)
+            self.collate_fn = getattr(self.trainer.model, "collate_fn", None)
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
         return DataLoader(

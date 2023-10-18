@@ -9,12 +9,12 @@ from lightning.pytorch.utilities.types import STEP_OUTPUT
 from transformers import (
     AutoModelForSeq2SeqLM,
     AutoTokenizer,
-    DataCollatorForSeq2Seq,
     get_scheduler,
 )
 
 from src.models.modules import Recall
-from src.utils.helpers import chunks, label2schema
+from src.utils.collators import Text2SchemaCollator
+from src.utils.helpers import chunks, deserialize_schema
 
 
 class SchemaRouting(pl.LightningModule):
@@ -45,8 +45,9 @@ class SchemaRouting(pl.LightningModule):
             self.tokenizer.add_special_tokens({"sep_token": sep_token})
             self.model.resize_token_embeddings(len(self.tokenizer))
 
-        self.collate_fn = DataCollatorForSeq2Seq(
-            tokenizer=self.tokenizer, model=self.model
+        self.collate_fn = Text2SchemaCollator(
+            tokenizer=self.tokenizer,
+            max_length=max_length,
         )
 
         self.metrics = torch.nn.ModuleDict()
@@ -87,10 +88,8 @@ class SchemaRouting(pl.LightningModule):
             )
         ]
         _label2schema = partial(
-            label2schema,
+            deserialize_schema,
             separator=self.tokenizer.sep_token,
-            add_db=self.trainer.datamodule.hparams.add_db,
-            tbl2db=self.trainer.datamodule.tbl2db,
         )
         pred_schemas = [_label2schema(s) for s in pred_texts]
         batch_size = len(batch["input_ids"])

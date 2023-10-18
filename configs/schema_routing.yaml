@@ -1,7 +1,6 @@
 seed_everything: 123
 trainer:
   max_epochs: 50
-  # precision: "16-mixed"
 model:
   class_path: src.models.SchemaRouting
   init_args:

@@ -6,12 +6,13 @@ from transformers import (
     AutoModelForCausalLM,
     AutoModelForSeq2SeqLM,
     AutoTokenizer,
-    DataCollatorForSeq2Seq,
     get_scheduler,
 )
 
+from src.utils.collators import Schema2TextCollator
 
-class Schema2Query(pl.LightningModule):
+
+class SchemaQuestioning(pl.LightningModule):
     def __init__(
         self,
         model_name_or_path: str,
@@ -29,9 +30,7 @@ class Schema2Query(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
 
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            model_name_or_path, verbose=False
-        )
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
         try:
             self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name_or_path)
             self.mode = "seq2seq"
@@ -48,8 +47,10 @@ class Schema2Query(pl.LightningModule):
         if self.tokenizer.pad_token_id is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
-        self.collate_fn = DataCollatorForSeq2Seq(
-            tokenizer=self.tokenizer, model=self.model
+        self.collate_fn = Schema2TextCollator(
+            tokenizer=self.tokenizer,
+            model_mode=self.mode,
+            max_length=max_length,
         )
 
     def forward(self, **inputs):
@@ -82,7 +83,7 @@ class Schema2Query(pl.LightningModule):
 
     def predict_step(self, batch, batch_idx: int, dataloader_idx: int = 0):
         outputs = self.model.generate(**batch, **self.hparams.generator_config)
-        if self.mode != "seq2seq":
+        if self.mode == "causal":
             outputs = [opt[len(ipt) :] for ipt, opt in zip(batch["input_ids"], outputs)]
 
         pred_texts = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
