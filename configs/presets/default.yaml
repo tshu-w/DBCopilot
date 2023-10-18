@@ -6,7 +6,7 @@ trainer:
   logger:
     class_path: WandbLogger
     init_args:
-      project: schema-routing
+      project: DBCopilot
       save_dir: results
   accelerator: auto
   devices: 1

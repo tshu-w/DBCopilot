@@ -11,7 +11,7 @@ exclude = [
     "**/.*",
     "src/vendor",
 ]
-venv = "schema-routing"
+venv = "DBCopilot"
 typeCheckingMode = "off"
 useLibraryCodeForTypes = true
 
