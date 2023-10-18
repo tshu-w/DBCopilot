@@ -1,9 +1,13 @@
 import itertools
 import random
-from collections import Counter, defaultdict
+from collections import Counter, defaultdict, namedtuple
 from collections.abc import Iterable, Iterator
+from operator import attrgetter
 
 import networkx as nx
+
+Node = namedtuple("Node", ["name", "affiliation"])
+snode = Node("source", "")
 
 
 def chunks(lst: Iterable, n: int) -> Iterator[Iterable]:
@@ -15,23 +19,129 @@ def chunks(lst: Iterable, n: int) -> Iterator[Iterable]:
 
 def schema2graph(schemas: dict) -> nx.DiGraph:
     G = nx.DiGraph()
-    links = defaultdict(set)
 
     for database, tables in schemas.items():
-        G.add_edge("source", database)
+        links = defaultdict(set)
+        dnode = Node(database, "source")
+        G.add_edge(snode, dnode)
         for table in tables:
-            G.add_edge(database, table["name"])
+            tnode = Node(table["name"], database)
+            G.add_edge(dnode, tnode)
             for column in table["columns"]:
                 foreign_key = column.get("foreign_key", None)
                 if foreign_key:
-                    key = f"{foreign_key['table']}.{foreign_key['column']}"
+                    key = f'{foreign_key["table"]}.{foreign_key["column"]}'
                     links[key].update([foreign_key["table"], table["name"]])
 
-    for tables in links.values():
-        for tbl1, tbl2 in itertools.product(tables, tables):
-            G.add_edge(tbl1, tbl2)
+        for tables in links.values():
+            for tbl1, tbl2 in itertools.product(tables, tables):
+                if tbl1 != tbl2:
+                    tnode1 = Node(tbl1, database)
+                    tnode2 = Node(tbl2, database)
+                    G.add_edge(tnode1, tnode2)
 
     return G
+
+
+def serialize_schema(
+    schema: dict, G: nx.DiGraph, separator: str, shuffle: bool = False
+) -> str:
+    """
+    Serialize a schema into a depth-first-search pre-order sequence of graph G.
+
+    Input: {
+      "database": "<database_name>",
+      "metadata": [
+        {"name": "<table_name_1>", "columns": ["<column_name_1>", "<column_name_2>"]},
+        {"name": "<table_name_2>", "columns": ["<column_name_1>", "<column_name_2>", "<column_name_3>"]},
+        {"name": "<table_name_3>", "columns": ["<column_name_1>"]}
+      ]
+    }
+
+    Output: <database_name> <table_name_1> <table_name_2> <table_name_3>
+    """
+    # Check separator is not in labels
+    assert separator not in schema["database"]
+    assert all(separator not in t["name"] for t in schema["metadata"])
+
+    nodes = {
+        snode,
+        Node(schema["database"], "database"),
+        *[
+            Node(f'{schema["database"]}.{t["name"]}', "table")
+            for t in schema["metadata"]
+        ],
+    }
+    stack = [snode]
+    visited = []
+    while stack:
+        node = stack.pop()
+        visited.append(node)
+        if set(visited) == nodes:
+            break
+
+        children = [
+            child for child in list(G[node]) if child in nodes and child not in visited
+        ]
+        children = random.shuffle(children) if shuffle else children
+        stack.extend(children)
+    else:
+        print(schema)
+
+    # ## Trail traversal
+    # def dfs(node):
+    #     visited = list(map(itemgetter(1), walk))
+    #     if set(visited) == nodes:
+    #         return visited
+
+    #     children = [
+    #         child
+    #         for child in list(G[node])
+    #         if child in nodes and (node, child) not in walk
+    #     ]
+    #     children = random.shuffle(children) if shuffle else children
+
+    #     for child in children:
+    #         walk.append((node, child))
+    #         res = dfs(child)
+    #         if res is not None:
+    #             return res
+    #         walk.pop()
+
+    #     return None
+
+    # nodes = {
+    #     Node(schema["database"], "database"),
+    #     *[
+    #         Node(f'{schema["database"]}.{t["name"]}', "table")
+    #         for t in schema["metadata"]
+    #     ],
+    # }
+    # walk = []
+    # visited = dfs(snode)
+    # if visited is None:
+    #     print(schema)
+    #     breakpoint()
+
+    return separator.join(map(attrgetter("name"), visited[1:]))
+
+
+def deserialize_schema(s: str, separator: dict) -> dict:
+    """
+    Deserialize string of labels into a dict of database schema.
+
+    Input: <database_name> <table_name_1> <table_name_2> <table_name_3>
+
+    Output: {"<database_name>": ["<table_name_1>", "<table_name_2>", "<table_name_3>"]}
+    """
+    # Remove space after separator for T5,
+    # see https://github.com/huggingface/transformers/issues/24743
+    s = s.replace(f"{separator} ", f"{separator}")
+
+    database, *tables = s.split(f"{separator}")
+    schema = {database: list(tables)}
+
+    return schema
 
 
 def schema2label(
@@ -98,7 +208,7 @@ def label2schema(
     Output: {"<database_name>": ["<table_name_1>", "<table_name_2>", "<table_name_3>"]}
     """
     try:
-        # Remove space after separator for t5,
+        # Remove space after separator for T5,
         # see https://github.com/huggingface/transformers/issues/24743
         s = s.replace(f"{separator} ", f"{separator}")
 
