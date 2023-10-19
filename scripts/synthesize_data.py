@@ -59,7 +59,7 @@ def synthesize_data(
     )
     walks = [[idx2node[idx] for idx in x] for x in X]
 
-    sythetic_data = []
+    synthetic_data = []
     for walk in walks:
         db, *tbls = map(lambda x: x.name, OrderedDict.fromkeys(walk[1:]))
         schema = {"database": db, "metadata": []}
@@ -87,7 +87,7 @@ def synthesize_data(
 
         synthetic_data.append({"schema": schema, "sql": ""})
 
-    ds = Dataset.from_list(sythetic_data)
+    ds = Dataset.from_list(synthetic_data)
     model = SchemaQuestioning.load_from_checkpoint(ckpt_path)
     dataloader = DataLoader(
         ds, batch_size=256, collate_fn=model.collate_fn, num_workers=32
@@ -95,11 +95,11 @@ def synthesize_data(
     trainer = Trainer(logger=False)
     preditions = trainer.predict(model, dataloader)
     preditions = [t for lst in preditions for t in lst]
-    for question, generated in zip(preditions, sythetic_data):
+    for question, generated in zip(preditions, synthetic_data):
         generated["question"] = question
 
-    with Path(f"./data/{dataset}/sythetic.json").open("w") as f:
-        json.dump(sythetic_data, f, indent=2)
+    with Path(f"./data/{dataset}/synthetic.json").open("w") as f:
+        json.dump(synthetic_data, f, indent=2)
 
 
 if __name__ == "__main__":

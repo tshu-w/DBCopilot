@@ -14,7 +14,7 @@ class Text2Schema(pl.LightningDataModule):
     def __init__(
         self,
         dataset: str = "spider",
-        train_data: Literal["original", "synthetic", "all"] = "sythetic",
+        train_data: Literal["original", "synthetic", "all"] = "synthetic",
         *,
         preprocessing_num_workers: int = None,
         batch_size: int = 32,
