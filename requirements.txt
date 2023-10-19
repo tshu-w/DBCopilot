@@ -13,9 +13,11 @@ datasets
 evaluate
 
 func-timeout
+graph-walker
 guidance
 nltk
 pandas
+pybind11
 retriv
 sqlglot
 sqlparse
