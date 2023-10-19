@@ -5,8 +5,9 @@ model:
   class_path: src.models.SchemaRouting
   init_args:
     model_name_or_path: ./models/t5-base
+    max_length: 256
     generator_config:
-      max_new_tokens: 512
+      max_new_tokens: 256
       # num_beams: 10
       # num_beam_groups: 10
       # diversity_penalty: 1.0
