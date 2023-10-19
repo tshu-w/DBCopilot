@@ -1,4 +1,4 @@
-description: schema-routing
+description: DBCopilot
 
 environment:
   image: docker.cipsup.cn/wangtianshu/base
