@@ -40,12 +40,10 @@ def extract_metadata(sql_query: str, database: list[dict]) -> list[dict]:
     metadata = [
         {
             "name": t["name"],
-            "columns": [
-                c["name"] for c in t["columns"] if c["original_name"].lower() in columns
-            ],
+            "columns": [c["name"] for c in t["columns"] if c["name"] in columns],
         }
         for t in database
-        if t["original_name"].lower() in tables
+        if t["name"] in tables
     ]
 
     return metadata
@@ -72,15 +70,14 @@ def get_dataset_schemas(dataset) -> dict:
     databases = {}
     for db in raw_tables:
         tables = []
-        for i, t in enumerate(db["table_names"]):
-            db["table_names"][i] = t.lower()
-        for i, (_, t) in enumerate(db["column_names"]):
-            db["column_names"][i][1] = t.lower()
+        for i, t in enumerate(db["table_names_original"]):
+            db["table_names_original"][i] = t.lower()
+        for i, (_, t) in enumerate(db["column_names_original"]):
+            db["column_names_original"][i][1] = t.lower()
 
-        for i in range(len(db["table_names"])):
+        for i in range(len(db["table_names_original"])):
             table = {}
-            table["name"] = db["table_names"][i]
-            table["original_name"] = db["table_names_original"][i]
+            table["name"] = db["table_names_original"][i]
             table["columns"] = []
             primary_keys = []
             for v in db["primary_keys"]:
@@ -88,11 +85,10 @@ def get_dataset_schemas(dataset) -> dict:
                     primary_keys.extend(v)
                 else:
                     primary_keys.append(v)
-            for j in range(len(db["column_names"])):
-                if db["column_names"][j][0] == i:
+            for j in range(len(db["column_names_original"])):
+                if db["column_names_original"][j][0] == i:
                     column = {}
-                    column["name"] = db["column_names"][j][1]
-                    column["original_name"] = db["column_names_original"][j][1]
+                    column["name"] = db["column_names_original"][j][1]
                     column["type"] = db["column_types"][j - type_offset]
                     if j in primary_keys:
                         column["primary_key"] = True
@@ -100,10 +96,10 @@ def get_dataset_schemas(dataset) -> dict:
                     for left, right in db["foreign_keys"]:
                         if left == j:
                             column["foreign_key"] = {
-                                "table": db["table_names"][
-                                    db["column_names"][right][0]
+                                "table": db["table_names_original"][
+                                    db["column_names_original"][right][0]
                                 ],
-                                "column": db["column_names"][right][1],
+                                "column": db["column_names_original"][right][1],
                             }
                     table["columns"].append(column)
             tables.append(table)
