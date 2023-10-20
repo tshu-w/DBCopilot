@@ -78,7 +78,7 @@ class SchemaRouting(pl.LightningModule):
     def evaluation_step(
         self, batch, step: str, dataloader_idx: int = 0
     ) -> STEP_OUTPUT | None:
-        batch.pop("decoder_input_ids", None)
+        test_name = self.trainer.datamodule.test_splits[dataloader_idx]
 
         outputs = self.model.generate(**batch, **self.generator_config)
         pred_texts = [
@@ -94,10 +94,10 @@ class SchemaRouting(pl.LightningModule):
         pred_schemas = [_label2schema(s) for s in pred_texts]
         batch_size = len(batch["input_ids"])
         chunk_size = len(pred_schemas) // batch_size
-        self.outputs[f"{step}_pred_texts_{dataloader_idx}"].extend(
+        self.outputs[f"{step}_pred_texts_{test_name}"].extend(
             chunks(pred_texts, chunk_size) if chunk_size > 1 else pred_texts
         )
-        self.outputs[f"{step}_pred_schemas_{dataloader_idx}"].extend(
+        self.outputs[f"{step}_pred_schemas_{test_name}"].extend(
             chunks(pred_schemas, chunk_size) if chunk_size > 1 else pred_schemas
         )
 
