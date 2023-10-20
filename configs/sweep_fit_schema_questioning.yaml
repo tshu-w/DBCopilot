@@ -3,14 +3,14 @@ fit:
   gpus_per_trial: 1
   configs:
     - configs/schema_questioning.yaml
-  # data_configs:
-  #   - configs/data/spider.yaml
-  #   - configs/data/bird.yaml
-  #   - configs/data/wikisql.yaml
+  data_configs:
+    - configs/data/spider_r.yaml
+    - configs/data/bird_r.yaml
+    - configs/data/wikisql_r.yaml
+    - configs/data/all_r.yaml
   override_kwargs:
     seed_everything:
       - 123
     model.model_name_or_path:
       - "./models/t5-base"
-      - "./models/all-t5-base-v1"
       - "./models/flan-t5-base"
