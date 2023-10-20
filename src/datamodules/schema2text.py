@@ -31,7 +31,7 @@ class Schema2Text(pl.LightningDataModule):
             **{
                 "test"
                 if f.parent.stem == dataset
-                else f"test_{f.parent.stem[len(dataset):]}": [str(f)]
+                else f"test_{f.parent.stem[len(dataset) + 1:]}": [str(f)]
                 for f in sorted(Path("data").glob(f"{dataset}*/test.json"))
             },
         }
