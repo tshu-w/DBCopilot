@@ -32,7 +32,7 @@ class Text2SchemaCollator:
         features = self.tokenizer(
             text=inputs,
             text_target=targets,
-            padding="max_length",
+            padding=True,
             truncation=True,
             max_length=self.max_length,
             return_tensors="pt",
@@ -69,7 +69,7 @@ class Schema2TextCollator:
             features = self.tokenizer(
                 text=inputs,
                 text_target=targets,
-                padding="max_length",
+                padding=True,
                 truncation=True,
                 max_length=self.max_length,
                 return_tensors="pt",
@@ -82,7 +82,7 @@ class Schema2TextCollator:
             features = self.tokenizer(
                 text=inputs,
                 text_target=targets,
-                padding="max_length",
+                padding=True,
                 truncation=True,
                 max_length=self.max_length,
                 return_tensors="pt",
