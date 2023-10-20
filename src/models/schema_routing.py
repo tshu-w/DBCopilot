@@ -27,9 +27,9 @@ class SchemaRouting(pl.LightningModule):
         },
         *,
         sep_token: str = "<sep>",
-        max_length: int = 512,
+        max_length: int | None = 512,
         weight_decay: float = 0.0,
-        learning_rate: float = 2e-5,
+        learning_rate: float = 1e-4,
         scheduler_type: str = "linear",
         warmup_steps: int = 0,
     ) -> None:

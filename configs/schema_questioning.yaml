@@ -1,12 +1,11 @@
 seed_everything: 123
 trainer:
-  max_epochs: 50
-  # precision: "16-true"
+  max_epochs: 10
   callbacks+:
     - class_path: ModelCheckpoint
       init_args:
         save_top_k: -1
-        every_n_epochs: 5
+        every_n_epochs: 1
 model:
   class_path: src.models.SchemaQuestioning
   init_args:
@@ -15,7 +14,7 @@ model:
       max_new_tokens: 256
     max_length: 256
     weight_decay: 0.0
-    learning_rate: 2.0e-05
+    learning_rate: 1.0e-04
     scheduler_type: linear
     warmup_steps: 0
 data:
