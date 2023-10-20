@@ -6,6 +6,7 @@ from pathlib import Path
 import lightning.pytorch as pl
 import torch
 from lightning.pytorch.utilities.types import STEP_OUTPUT
+from torchmetrics import MetricCollection
 from transformers import (
     AutoModelForSeq2SeqLM,
     AutoTokenizer,
@@ -50,14 +51,12 @@ class SchemaRouting(pl.LightningModule):
             max_length=max_length,
         )
 
+        metrics = MetricCollection({"dR": Recall(), "tR": Recall()})
         self.metrics = torch.nn.ModuleDict()
         for step in ["val", "test"]:
-            self.metrics[step] = torch.nn.ModuleDict(
-                {
-                    f"{step}/dR": Recall(),
-                    f"{step}/tR": Recall(),
-                }
-            )
+            self.metrics[step] = metrics.clone(prefix=f"{step}/")
+
+        self.pre_dataloader_idx = -1
 
         self.outputs = defaultdict(list)
 
@@ -78,7 +77,14 @@ class SchemaRouting(pl.LightningModule):
     def evaluation_step(
         self, batch, step: str, dataloader_idx: int = 0
     ) -> STEP_OUTPUT | None:
-        test_name = self.trainer.datamodule.test_splits[dataloader_idx]
+        # Reset metrics between different test dataloaders
+        if (
+            step == "test"
+            and (prefix := f"{self.trainer.datamodule.test_splits[dataloader_idx]}/")
+            != self.metrics[step].prefix
+        ):
+            self.metrics[step].reset()
+            self.metrics[step].prefix = prefix
 
         outputs = self.model.generate(**batch, **self.generator_config)
         pred_texts = [
@@ -94,10 +100,10 @@ class SchemaRouting(pl.LightningModule):
         pred_schemas = [_label2schema(s) for s in pred_texts]
         batch_size = len(batch["input_ids"])
         chunk_size = len(pred_schemas) // batch_size
-        self.outputs[f"{step}_pred_texts_{test_name}"].extend(
+        self.outputs[f"{step}_pred_texts_{dataloader_idx}"].extend(
             chunks(pred_texts, chunk_size) if chunk_size > 1 else pred_texts
         )
-        self.outputs[f"{step}_pred_schemas_{test_name}"].extend(
+        self.outputs[f"{step}_pred_schemas_{dataloader_idx}"].extend(
             chunks(pred_schemas, chunk_size) if chunk_size > 1 else pred_schemas
         )
 
@@ -114,8 +120,8 @@ class SchemaRouting(pl.LightningModule):
         self.outputs[f"{step}_tgt_texts_{dataloader_idx}"].extend(target_texts)
         self.outputs[f"{step}_tgt_schemas_{dataloader_idx}"].extend(target_schemas)
 
-        self.update_metrics(pred_schemas, target_schemas, step=step)
-        self.log_dict(self.metrics[step], prog_bar=True)
+        self.update_metrics(pred_schemas, target_schemas, metric_key=step)
+        self.log_dict(self.metrics[step], prog_bar=True, add_dataloader_idx=False)
 
         loss = self.common_step(batch)
         self.log(f"{step}/loss", loss, prog_bar=True)
@@ -131,7 +137,7 @@ class SchemaRouting(pl.LightningModule):
         return self.evaluation_step(batch, step="test", dataloader_idx=dataloader_idx)
 
     def update_metrics(
-        self, pred_schemas: list[dict], target_schemas: list[dict], step: str
+        self, pred_schemas: list[dict], target_schemas: list[dict], metric_key: str
     ):
         def merge_nested_list(
             nested_lst: list[list[str]], step: int
@@ -146,12 +152,12 @@ class SchemaRouting(pl.LightningModule):
         pred_databases = [[d for d in s] for s in pred_schemas]
         target_databases = [[d for d in s] for s in target_schemas]
         pred_databases = merge_nested_list(pred_databases, step=merge_step)
-        self.metrics[step][f"{step}/dR"](pred_databases, target_databases)
+        self.metrics[metric_key]["dR"](pred_databases, target_databases)
 
         pred_tables = [[f"{d}.{t}" for d in s for t in s[d]] for s in pred_schemas]
         target_tables = [[f"{d}.{t}" for d in s for t in s[d]] for s in target_schemas]
         pred_tables = merge_nested_list(pred_tables, step=merge_step)
-        self.metrics[step][f"{step}/tR"](pred_tables, target_tables)
+        self.metrics[metric_key]["tR"](pred_tables, target_tables)
 
     def postprocess_text(self, s: str) -> str:
         for token in ["bos_token", "pad_token", "eos_token"]:
