@@ -164,7 +164,7 @@ class SchemaRouting(pl.LightningModule):
         for k, v in self.outputs.items():
             pth = Path(self.trainer.log_dir) / f"{k}.json"
             with pth.open("w") as f:
-                json.dump(v, f, indent=2, ensure_ascii=False)
+                json.dump(v, f, indent=2)
 
         self.outputs.clear()
 
@@ -172,7 +172,7 @@ class SchemaRouting(pl.LightningModule):
         for k, v in self.outputs.items():
             pth = Path(self.trainer.log_dir) / f"{k}.json"
             with pth.open("w") as f:
-                json.dump(v, f, indent=2, ensure_ascii=False)
+                json.dump(v, f, indent=2)
 
         self.outputs.clear()
 
