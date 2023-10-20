@@ -51,7 +51,10 @@ def WandbLogger_log_dir(self) -> str:
     save_dir = self._save_dir
     name = self.experiment.name
     version = self.experiment.id
-    self._log_dir = os.path.join(save_dir, name, version)
+    try:
+        self._log_dir = os.path.join(save_dir, name, version)
+    except TypeError:
+        return None
 
     return self._log_dir
 
