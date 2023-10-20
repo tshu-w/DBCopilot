@@ -208,14 +208,23 @@ def dr_spider(
                 "metadata": metadata,
             }
             record["sql"] = record.pop("query")
-            for key in ["query_toks", "query_toks_no_value", "question_toks"]:
+            for key in [
+                "query_toks",
+                "query_toks_no_value",
+                "question_toks",
+                "q_id_spider_dev",
+            ]:
                 record.pop(key, None)
 
+    total_dev_data = []
     for dir in (ds_path / "data").iterdir():
         if dir.name.startswith(("NLQ_", "SQL_")):
             dev_data = load_data(dir / "questions_post_perturbation.json")
             convert_data(dev_data)
+            total_dev_data.extend(dev_data)
             write_data(tgt_path / f"test_{dir.name.lower()}.json", dev_data)
+
+    write_data(tgt_path / "test.json", dev_data)
 
 
 def bird(ds_path=RAW_DATA_PATH / "bird", tgt_path=TGT_PATH / "bird"):
