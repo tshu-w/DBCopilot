@@ -78,6 +78,7 @@ def get_dataset_schemas(dataset) -> dict:
         for i in range(len(db["table_names_original"])):
             table = {}
             table["name"] = db["table_names_original"][i]
+            table["normalized_name"] = db["table_names"][i]
             table["columns"] = []
             primary_keys = []
             for v in db["primary_keys"]:
@@ -89,6 +90,7 @@ def get_dataset_schemas(dataset) -> dict:
                 if db["column_names_original"][j][0] == i:
                     column = {}
                     column["name"] = db["column_names_original"][j][1]
+                    column["normalized_name"] = db["column_names"][j][1]
                     column["type"] = db["column_types"][j - type_offset]
                     if j in primary_keys:
                         column["primary_key"] = True
