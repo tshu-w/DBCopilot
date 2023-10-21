@@ -85,6 +85,8 @@ class SchemaRouting(pl.LightningModule):
         ):
             self.metrics[step].reset()
             self.metrics[step].prefix = prefix
+        else:
+            prefix = self.metrics[step].prefix
 
         outputs = self.model.generate(**batch, **self.generator_config)
         pred_texts = [
@@ -100,10 +102,10 @@ class SchemaRouting(pl.LightningModule):
         pred_schemas = [_label2schema(s) for s in pred_texts]
         batch_size = len(batch["input_ids"])
         chunk_size = len(pred_schemas) // batch_size
-        self.outputs[f"{step}_pred_texts_{dataloader_idx}"].extend(
+        self.outputs[f"{prefix[:-1]}_pred_texts"].extend(
             chunks(pred_texts, chunk_size) if chunk_size > 1 else pred_texts
         )
-        self.outputs[f"{step}_pred_schemas_{dataloader_idx}"].extend(
+        self.outputs[f"{prefix[:-1]}_pred_schemas"].extend(
             chunks(pred_schemas, chunk_size) if chunk_size > 1 else pred_schemas
         )
 
@@ -117,8 +119,8 @@ class SchemaRouting(pl.LightningModule):
             )
         ]
         target_schemas = [_label2schema(s) for s in target_texts]
-        self.outputs[f"{step}_tgt_texts_{dataloader_idx}"].extend(target_texts)
-        self.outputs[f"{step}_tgt_schemas_{dataloader_idx}"].extend(target_schemas)
+        self.outputs[f"{prefix[:-1]}_tgt_texts"].extend(target_texts)
+        self.outputs[f"{prefix[:-1]}_tgt_schemas"].extend(target_schemas)
 
         self.update_metrics(pred_schemas, target_schemas, metric_key=step)
         self.log_dict(self.metrics[step], prog_bar=True, add_dataloader_idx=False)
