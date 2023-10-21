@@ -21,17 +21,17 @@ def generate_collection(schemas, resolution) -> dict[str, str]:
                 for col in tbl["columns"]:
                     doc = {
                         "id": f"{db}.{tbl['name']}.{col['name']}",
-                        "text": f"{db} {tbl['name']} {col['name']}",
+                        "text": f"{db} {tbl['normalized_name']} {col['normalized_name']}",
                     }
                     yield doc
         elif resolution == "table":
             for tbl in tables:
-                text = f"{db} {tbl['name']} {' '.join(map(itemgetter('name'), tbl['columns']))}"
+                text = f"{db} {tbl['normalized_name']} {' '.join(map(itemgetter('normalized_name'), tbl['columns']))}"
                 doc = {"id": f"{db}.{tbl['name']}", "text": text}
                 yield doc
         elif resolution == "database":
             text = " ".join(
-                f"{tbl['name']} {' '.join(map(itemgetter('name'), tbl['columns']))}"
+                f"{tbl['normalized_name']} {' '.join(map(itemgetter('normalized_name'), tbl['columns']))}"
                 for tbl in tables
             )
             text = f"{db} {text}"
@@ -125,6 +125,7 @@ if __name__ == "__main__":
     datasets = {
         "spider": ["spider", "spider_syn", "spider_realistic", "spider_dr"],
         "bird": ["bird"],
+        "fiben": ["fiben"],
         "wikisql": ["wikisql"],
     }
     resolutions = [
@@ -144,6 +145,7 @@ if __name__ == "__main__":
         "spider": "sentence-transformers/all-mpnet-base-v2",
         "bird": "sentence-transformers/all-mpnet-base-v2",
         "wikisql": "sentence-transformers/all-mpnet-base-v2",
+        "fiben": "sentence-transformers/all-mpnet-base-v2",
     }
 
     for data, tests in datasets.items():
@@ -183,5 +185,6 @@ if __name__ == "__main__":
                     str(tune),
                     *map(str, result.values()),
                 )
+                console.print(table)
 
     console.print(table)
