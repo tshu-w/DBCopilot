@@ -19,7 +19,7 @@ from src.utils.helpers import schema2graph, snode
 def synthesize_data(
     dataset: str,
     ckpt_path: str,
-    k: int = 20,
+    n_walks: int,
     p: float = 1.0,
     q: float = 1.0,
 ):
@@ -29,7 +29,7 @@ def synthesize_data(
     G = schema2graph(schemas)
 
     files = list(Path("./data").glob(f"{dataset}*/*.json"))
-    files = [f for f in files if not str(f).endswith("schemas.json")]
+    files = [f for f in files if f.name not in ["schemas.json", "synthetic.json"]]
     data = []
     for f in files:
         with f.open() as f:
@@ -50,7 +50,7 @@ def synthesize_data(
     idx2node = {i: n for i, n in enumerate(G)}
     X = random_walks(
         G,
-        n_walks=k * len(G),
+        n_walks=n_walks,
         walk_len=2 + 2 * max_tbls,
         start_nodes=[node2idx[snode]],
         p=p,
@@ -67,17 +67,16 @@ def synthesize_data(
         tbl_nums = random.choices(
             list(counters["table"]), weights=counters["table"].values()
         )
-        tbls = tbls[: min(tbl_nums[0] + 1, len(tbls))]
+        tbls = tbls[: min(tbl_nums[0], len(tbls))]
         for tbl in tbls:
             for table in schemas[db]:
                 if tbl == table["name"]:
-                    # col_nums = random.choices(
-                    #     list(counters["column"]), weights=counters["column"].values()
-                    # )
-                    # col_num = min(col_nums[0], len(table["columns"]))
-                    # columns = random.sample(table["columns"], k=col_num)
-                    # columns = list(map(lambda x: x["name"], columns))
-                    columns = list(map(lambda x: x["name"], table["columns"]))
+                    col_nums = random.choices(
+                        list(counters["column"]), weights=counters["column"].values()
+                    )
+                    col_num = min(col_nums[0], len(table["columns"]))
+                    columns = random.sample(table["columns"], k=col_num)
+                    columns = list(map(lambda x: x["name"], columns))
                     schema["metadata"].append(
                         {
                             "name": tbl,
@@ -92,7 +91,7 @@ def synthesize_data(
     dataloader = DataLoader(
         ds, batch_size=256, collate_fn=model.collate_fn, num_workers=32
     )
-    trainer = Trainer(logger=False)
+    trainer = Trainer(logger=False, devices=1)
     preditions = trainer.predict(model, dataloader)
     preditions = [t for lst in preditions for t in lst]
     for question, generated in zip(preditions, synthetic_data):
@@ -110,8 +109,16 @@ if __name__ == "__main__":
         "fiben",
     ]
     ckpt_paths = [
-        "results/fit/classic-lake-5/fk0oxh78/checkpoints/epoch=29-step=28290.ckpt"
+        "results/fit/swift-music-32/6eb9bfft/checkpoints/epoch=9-step=9430.ckpt"
+    ]
+    n_walks_lst = [
+        100000,
+        100000,
+        500000,
+        100000,
     ]
 
-    for dataset, ckpt_path in zip(datasets, ckpt_paths * len(datasets)):
-        synthesize_data(dataset, ckpt_path, k=40)
+    for dataset, ckpt_path, n_walks in zip(
+        datasets, ckpt_paths * len(datasets), n_walks_lst
+    ):
+        synthesize_data(dataset, ckpt_path, n_walks=n_walks)
