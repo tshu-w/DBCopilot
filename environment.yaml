@@ -1,4 +1,4 @@
-name: schema-routing
+name: DBCopilot
 channels:
   - defaults
   - conda-forge
@@ -6,5 +6,6 @@ channels:
 dependencies:
   - python=3.10
   - pip
+  - pybind11
   - pip:
       - --requirement requirements.txt
