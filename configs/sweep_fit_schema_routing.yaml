@@ -6,15 +6,12 @@ fit:
   data_configs:
     - configs/data/spider.yaml
     - configs/data/bird.yaml
-    - configs/data/wikisql.yaml
     - configs/data/fiben.yaml
+    - configs/data/wikisql.yaml
   override_kwargs:
     seed_everything:
       - 123
-      # - 42
-    model.learning_rate:
-      - 2.0e-05
     data.train_data:
+      - synthetic
       - original
-      - sythetic
       - all
