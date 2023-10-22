@@ -3,6 +3,7 @@ import shutil
 import sys
 from pathlib import Path
 
+import wordninja
 from sqlglot import exp, parse_one
 from tqdm import tqdm
 
@@ -72,8 +73,12 @@ def get_dataset_schemas(dataset) -> dict:
         tables = []
         for i, t in enumerate(db["table_names_original"]):
             db["table_names_original"][i] = t.lower()
+            if dataset == "fiben":
+                db["table_names"][i] = " ".join(wordninja.split(t))
         for i, (_, t) in enumerate(db["column_names_original"]):
             db["column_names_original"][i][1] = t.lower()
+            if dataset == "fiben":
+                db["column_names"][i][1] = " ".join(wordninja.split(t))
 
         for i in range(len(db["table_names_original"])):
             table = {}

@@ -21,6 +21,7 @@ retriv
 sqlglot
 sqlparse
 tenacity
+wordninja
 
 # dev tools
 wandb
