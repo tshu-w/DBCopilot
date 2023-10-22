@@ -6,6 +6,7 @@ from typing import Literal
 
 import numpy as np
 from joblib import Memory
+from lightning.fabric.utilities.seed import seed_everything
 from ranx import Qrels, Run, evaluate
 from retriv import DenseRetriever, SparseRetriever
 from rich.console import Console
@@ -91,6 +92,8 @@ def get_retriever(
 
         if tune and retriever_class != DenseRetriever:
             train_path = Path("data") / data_name / "train.json"
+            if data_name == "wikisql":
+                train_path == Path("data") / data_name / "dev.json"
             with train_path.open() as f:
                 train = json.load(f)
 
@@ -98,6 +101,7 @@ def get_retriever(
                 {"id": str(i), "text": it["question"]} for i, it in enumerate(train)
             ]
             qrels = generate_qrels(train, resolution)
+
             retriever.autotune(
                 queries=queries,
                 qrels=qrels,
@@ -188,7 +192,9 @@ if __name__ == "__main__":
     }
 
     for data, tests in datasets.items():
+        print(data)
         for test in tests:
+            print("\t", test)
             for resolution, retriever_class, tune in itertools.product(
                 resolutions, retriever_classes, tunes
             ):
@@ -197,6 +203,7 @@ if __name__ == "__main__":
                     if isinstance(retriever_class, SparseRetriever)
                     else "dense"
                 )
+                print("\t\t", resolution, retriever_type)
                 retriever_kwargs = {
                     "index_name": f"{data}/{resolution}_{retriever_type}_{str(tune).lower()}.index"
                 }
@@ -207,6 +214,7 @@ if __name__ == "__main__":
                         **retriever_kwargs,
                     }
 
+                seed_everything(42)
                 result = retrieve_schemas(
                     data,
                     test,
