@@ -199,9 +199,7 @@ if __name__ == "__main__":
                 resolutions, retriever_classes, tunes
             ):
                 retriever_type = (
-                    "sparse"
-                    if isinstance(retriever_class, SparseRetriever)
-                    else "dense"
+                    "sparse" if retriever_class == SparseRetriever else "dense"
                 )
                 print("\t\t", resolution, retriever_type)
                 retriever_kwargs = {
@@ -209,7 +207,7 @@ if __name__ == "__main__":
                 }
                 if retriever_class == DenseRetriever:
                     retriever_kwargs = {
-                        "model": default_model if tune else tuned_model[data],
+                        "model": tuned_model[data] if tune else default_model,
                         "use_ann": False,
                         **retriever_kwargs,
                     }
