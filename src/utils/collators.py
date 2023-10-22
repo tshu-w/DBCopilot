@@ -100,3 +100,39 @@ class Schema2TextCollator:
             features["labels"] == self.tokenizer.pad_token_id
         ] = self.label_pad_token_id
         return features
+
+
+@dataclass
+class ContrastiveCollator:
+    tokenizer: PreTrainedTokenizer
+    max_length: int | None = None
+
+    def __call__(self, batch: list[dict]) -> dict[str, any]:
+        questions, schemas = [], []
+        for instance in batch:
+            question, schema = instance["question"], instance["schema"]
+            questions.append(question)
+
+            text = " ".join(
+                f"{tbl['name']} {' '.join(tbl['columns'])}"
+                for tbl in schema["metadata"]
+            )
+            text = f"{schema['database']} {text}"
+            schemas.append(text)
+
+        features1 = self.tokenizer(
+            text=questions,
+            padding=True,
+            truncation=True,
+            max_length=self.max_length,
+            return_tensors="pt",
+        )
+        features2 = self.tokenizer(
+            text=schemas,
+            padding=True,
+            truncation=True,
+            max_length=self.max_length,
+            return_tensors="pt",
+        )
+
+        return features1, features2

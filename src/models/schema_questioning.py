@@ -20,7 +20,6 @@ class SchemaQuestioning(pl.LightningModule):
         generator_config: dict = {
             "max_new_tokens": 512,
         },
-        *,
         max_length: int | None = 512,
         weight_decay: float = 0.0,
         learning_rate: float = 1e-4,
