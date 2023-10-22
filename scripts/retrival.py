@@ -221,7 +221,7 @@ if __name__ == "__main__":
                     resolution,
                     retriever_class.__name__,
                     str(tune),
-                    *map(str, result.values()),
+                    *map(lambda x: str(round(x * 100, 2)), result.values()),
                 )
 
     console.print(table)
