@@ -5,13 +5,14 @@ from pathlib import Path
 from typing import Literal
 
 import numpy as np
-from lightning.fabric.utilities.seed import seed_everything
+from joblib import Memory
 from ranx import Qrels, Run, evaluate
 from retriv import DenseRetriever, SparseRetriever
 from rich.console import Console
 from rich.table import Table
 
-METRICS = ["recall@1", "recall@10", "recall@50"]
+METRICS = ["recall@1", "recall@5", "recall@10", "recall@25", "recall@50"]
+memory = Memory(Path.home() / ".cache" / "joblib", verbose=0)
 
 
 def generate_collection(schemas, resolution) -> dict[str, str]:
@@ -62,14 +63,13 @@ def generate_qrels(instances, resolution) -> dict[str, dict]:
     return qrels
 
 
-def retrieve_schemas(
+def get_retriever(
     data_name: str,
-    test_name: str,
     resolution: Literal["database", "table", "column"],
     retriever_class: SparseRetriever | DenseRetriever = SparseRetriever,
     retriever_kwargs: dict | None = None,
     tune: bool = False,
-):
+) -> SparseRetriever | DenseRetriever:
     try:
         retriever = retriever_class.load(retriever_kwargs["index_name"])
     except FileNotFoundError:
@@ -105,6 +105,26 @@ def retrieve_schemas(
 
         retriever.save()
 
+    return retriever
+
+
+@memory.cache
+def get_qrels_and_results(
+    data_name: str,
+    test_name: str,
+    resolution: Literal["database", "table", "column"],
+    retriever_class: SparseRetriever | DenseRetriever = SparseRetriever,
+    retriever_kwargs: dict | None = None,
+    tune: bool = False,
+):
+    retriever = get_retriever(
+        data_name=data_name,
+        resolution=resolution,
+        retriever_class=retriever_class,
+        retriever_kwargs=retriever_kwargs,
+        tune=tune,
+    )
+
     test = []
     test_paths = (Path("data") / test_name).glob("test*.json")
     for pth in test_paths:
@@ -114,9 +134,28 @@ def retrieve_schemas(
     queries = [{"id": str(i), "text": it["question"]} for i, it in enumerate(test)]
     results = retriever.bsearch(queries, show_progress=True, cutoff=100)
 
-    qrels = Qrels(generate_qrels(test, resolution))
-    run = Run(results)
-    return evaluate(qrels, run, metrics=METRICS)
+    qrels = generate_qrels(test, resolution)
+
+    return qrels, results
+
+
+def retrieve_schemas(
+    data_name: str,
+    test_name: str,
+    resolution: Literal["database", "table", "column"],
+    retriever_class: SparseRetriever | DenseRetriever = SparseRetriever,
+    retriever_kwargs: dict | None = None,
+    tune: bool = False,
+):
+    qrels, results = get_qrels_and_results(
+        data_name=data_name,
+        test_name=test_name,
+        resolution=resolution,
+        retriever_class=retriever_class,
+        retriever_kwargs=retriever_kwargs,
+        tune=tune,
+    )
+    return evaluate(Qrels(qrels), Run(results), metrics=METRICS)
 
 
 if __name__ == "__main__":
@@ -138,7 +177,7 @@ if __name__ == "__main__":
     ]
     tunes = [
         False,
-        True,
+        # True,
     ]
     default_model = "sentence-transformers/all-mpnet-base-v2"
     tuned_model = {
@@ -168,7 +207,6 @@ if __name__ == "__main__":
                         **retriever_kwargs,
                     }
 
-                seed_everything(42)
                 result = retrieve_schemas(
                     data,
                     test,
@@ -185,6 +223,5 @@ if __name__ == "__main__":
                     str(tune),
                     *map(str, result.values()),
                 )
-                console.print(table)
 
     console.print(table)
