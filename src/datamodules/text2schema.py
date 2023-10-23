@@ -86,6 +86,7 @@ class Text2Schema(pl.LightningDataModule):
             pin_memory=self.hparams.pin_memory,
             collate_fn=self.collate_fn,
             persistent_workers=self.hparams.num_workers > 0,
+            shuffle=False,
         )
 
     def test_dataloader(self) -> EVAL_DATALOADERS:

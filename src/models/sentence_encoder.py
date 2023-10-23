@@ -50,7 +50,7 @@ class SentenceEncoder(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx: int) -> STEP_OUTPUT | None:
         loss = self.common_step(batch)
-        self.log("val/loss", loss, prog_bar=True)
+        self.log("validation/loss", loss, prog_bar=True)
         return loss
 
     def test_step(

@@ -130,14 +130,14 @@ def deserialize_schema(s: str, separator: dict) -> dict:
 
     Input: <database_name> <table_name_1> <table_name_2> <table_name_3>
 
-    Output: {"<database_name>": ["<table_name_1>", "<table_name_2>", "<table_name_3>"]}
+    Output: {"database": "<database_name>", "tables": ["<table_name_1>", "<table_name_2>", "<table_name_3>"]}
     """
     # Remove space after separator for T5,
     # see https://github.com/huggingface/transformers/issues/24743
     s = s.replace(f"{separator} ", f"{separator}")
 
     database, *tables = s.split(f"{separator}")
-    schema = {database: list(tables)}
+    schema = {"database": database, "tables": tables}
 
     return schema
 

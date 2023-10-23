@@ -1,6 +1,7 @@
 import json
-from collections import defaultdict
+from collections import Counter, OrderedDict, defaultdict
 from functools import partial
+from itertools import chain
 from pathlib import Path
 
 import lightning.pytorch as pl
@@ -50,10 +51,20 @@ class SchemaRouting(pl.LightningModule):
             max_length=max_length,
         )
 
-        metrics = MetricCollection({"dR": Recall(), "tR": Recall()})
+        db_metrics = MetricCollection(
+            {"dR@1": Recall(top_k=1), "dR@5": Recall(top_k=5)}
+        )
+        tbl_metrics = MetricCollection(
+            {"tR@5": Recall(top_k=5), "tR@25": Recall(top_k=25)}
+        )
         self.metrics = torch.nn.ModuleDict()
-        for step in ["val", "test"]:
-            self.metrics[step] = metrics.clone(prefix=f"{step}/")
+        for step in ["validation", "test"]:
+            self.metrics[step] = torch.nn.ModuleDict(
+                {
+                    "db": db_metrics.clone(prefix=f"{step}/"),
+                    "tbl": tbl_metrics.clone(prefix=f"{step}/"),
+                }
+            )
 
         self.pre_dataloader_idx = -1
 
@@ -74,18 +85,20 @@ class SchemaRouting(pl.LightningModule):
         return loss
 
     def evaluation_step(
-        self, batch, step: str, dataloader_idx: int = 0
+        self, batch, step: str, batch_idx: int, dataloader_idx: int = 0
     ) -> STEP_OUTPUT | None:
         # Reset metrics between different test dataloaders
         if (
             step == "test"
             and (prefix := f"{self.trainer.datamodule.test_splits[dataloader_idx]}/")
-            != self.metrics[step].prefix
+            != self.metrics[step]["db"].prefix
         ):
-            self.metrics[step].reset()
-            self.metrics[step].prefix = prefix
+            self.metrics[step]["db"].reset()
+            self.metrics[step]["tbl"].reset()
+            self.metrics[step]["db"].prefix = prefix
+            self.metrics[step]["tbl"].prefix = prefix
         else:
-            prefix = self.metrics[step].prefix
+            prefix = self.metrics[step]["db"].prefix
 
         outputs = self.model.generate(**batch, **self.generator_config)
         pred_texts = [
@@ -101,64 +114,73 @@ class SchemaRouting(pl.LightningModule):
         pred_schemas = [_label2schema(s) for s in pred_texts]
         batch_size = len(batch["input_ids"])
         chunk_size = len(pred_schemas) // batch_size
-        self.outputs[f"{prefix[:-1]}_pred_texts"].extend(
-            chunks(pred_texts, chunk_size) if chunk_size > 1 else pred_texts
-        )
-        self.outputs[f"{prefix[:-1]}_pred_schemas"].extend(
-            chunks(pred_schemas, chunk_size) if chunk_size > 1 else pred_schemas
-        )
+        pred_texts = list(chunks(pred_texts, chunk_size))
+        pred_schemas = list(chunks(pred_schemas, chunk_size))
 
-        labels = torch.where(
-            batch["labels"] != -100, batch["labels"], self.tokenizer.pad_token_id
-        )
-        target_texts = [
-            self.postprocess_text(s)
-            for s in self.tokenizer.batch_decode(
-                labels, skip_special_tokens=False, clean_up_tokenization_spaces=False
-            )
+        global_bs = self.trainer.datamodule.hparams.batch_size
+        raw_data = self.trainer.datamodule.datasets[prefix[:-1]][
+            batch_idx * global_bs : (batch_idx + 1) * global_bs
         ]
-        target_schemas = [_label2schema(s) for s in target_texts]
-        self.outputs[f"{prefix[:-1]}_tgt_texts"].extend(target_texts)
-        self.outputs[f"{prefix[:-1]}_tgt_schemas"].extend(target_schemas)
+        raw_data["pred_texts"] = pred_texts
+        raw_data["pred_schemas"] = pred_schemas
+        preds = [{k: raw_data[k][i] for k in raw_data} for i in range(batch_size)]
+        self.outputs[prefix[:-1]].extend(preds)
 
-        self.update_metrics(pred_schemas, target_schemas, metric_key=step)
-        self.log_dict(self.metrics[step], prog_bar=True, add_dataloader_idx=False)
+        self.update_metrics(preds, metric_key=step)
+        self.log_dict(self.metrics[step]["db"], prog_bar=True, add_dataloader_idx=False)
+        self.log_dict(
+            self.metrics[step]["tbl"], prog_bar=True, add_dataloader_idx=False
+        )
 
         loss = self.common_step(batch)
-        self.log(f"{step}/loss", loss, prog_bar=True)
+        self.log(f"{prefix}loss", loss, prog_bar=True, add_dataloader_idx=False)
 
         return loss
 
     def validation_step(self, batch, batch_idx: int) -> STEP_OUTPUT | None:
-        return self.evaluation_step(batch, step="val")
+        return self.evaluation_step(batch, "validation", batch_idx)
 
     def test_step(
         self, batch, batch_idx: int, dataloader_idx: int = 0
     ) -> STEP_OUTPUT | None:
-        return self.evaluation_step(batch, step="test", dataloader_idx=dataloader_idx)
+        return self.evaluation_step(batch, "test", batch_idx, dataloader_idx)
 
-    def update_metrics(
-        self, pred_schemas: list[dict], target_schemas: list[dict], metric_key: str
-    ):
-        def merge_nested_list(
-            nested_lst: list[list[str]], step: int
-        ) -> list[list[str]]:
-            merged = []
-            for i in range(0, len(nested_lst), step):
-                merged.append([it for lst in nested_lst[i : i + step] for it in lst])
-            return merged
+    def update_metrics(self, preds: list[dict], metric_key: str):
+        pred_databases = []
+        pred_tables = []
+        for it in preds:
+            databases = list(
+                OrderedDict.fromkeys(s["database"] for s in it["pred_schemas"])
+            )
+            tables = [
+                f"{db}.{t}"
+                for db in databases
+                for t, _ in Counter(
+                    chain(
+                        *(
+                            s["tables"]
+                            for s in it["pred_schemas"]
+                            if s["database"] == db
+                        )
+                    )
+                ).most_common()
+            ]
+            pred_databases.append(databases)
+            pred_tables.append(tables)
 
-        merge_step = len(pred_schemas) // len(target_schemas)
+        tgt_databases = []
+        tgt_tables = []
+        for it in preds:
+            databases = [it["schema"]["database"]]
+            tables = [
+                f'{it["schema"]["database"]}.{t["name"]}'
+                for t in it["schema"]["metadata"]
+            ]
+            tgt_databases.append(databases)
+            tgt_tables.append(tables)
 
-        pred_databases = [[d for d in s] for s in pred_schemas]
-        target_databases = [[d for d in s] for s in target_schemas]
-        pred_databases = merge_nested_list(pred_databases, step=merge_step)
-        self.metrics[metric_key]["dR"](pred_databases, target_databases)
-
-        pred_tables = [[f"{d}.{t}" for d in s for t in s[d]] for s in pred_schemas]
-        target_tables = [[f"{d}.{t}" for d in s for t in s[d]] for s in target_schemas]
-        pred_tables = merge_nested_list(pred_tables, step=merge_step)
-        self.metrics[metric_key]["tR"](pred_tables, target_tables)
+        self.metrics[metric_key]["db"](pred_databases, tgt_databases)
+        self.metrics[metric_key]["tbl"](pred_tables, tgt_tables)
 
     def postprocess_text(self, s: str) -> str:
         for token in ["bos_token", "pad_token", "eos_token"]:
@@ -172,7 +194,6 @@ class SchemaRouting(pl.LightningModule):
             pth = Path(self.trainer.log_dir) / f"{k}.json"
             with pth.open("w") as f:
                 json.dump(v, f, indent=2)
-
         self.outputs.clear()
 
     def on_test_epoch_end(self) -> None:
@@ -180,7 +201,6 @@ class SchemaRouting(pl.LightningModule):
             pth = Path(self.trainer.log_dir) / f"{k}.json"
             with pth.open("w") as f:
                 json.dump(v, f, indent=2)
-
         self.outputs.clear()
 
     def configure_optimizers(self):
