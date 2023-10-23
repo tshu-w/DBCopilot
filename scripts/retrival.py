@@ -91,9 +91,7 @@ def get_retriever(
             )
 
         if tune and retriever_class != DenseRetriever:
-            train_path = Path("data") / data_name / "train.json"
-            if data_name == "wikisql":
-                train_path == Path("data") / data_name / "dev.json"
+            train_path = Path("data") / data_name / "synthetic.json"
             with train_path.open() as f:
                 train = json.load(f)
 
@@ -181,14 +179,14 @@ if __name__ == "__main__":
     ]
     tunes = [
         False,
-        # True,
+        True,
     ]
     default_model = "sentence-transformers/all-mpnet-base-v2"
     tuned_model = {
-        "spider": "sentence-transformers/all-mpnet-base-v2",
-        "bird": "sentence-transformers/all-mpnet-base-v2",
-        "wikisql": "sentence-transformers/all-mpnet-base-v2",
-        "fiben": "sentence-transformers/all-mpnet-base-v2",
+        "spider": "./results/fit/graceful-sky-50/nujq58r9/checkpoints/model",
+        "bird": "./results/fit/graceful-sky-50/nujq58r9/checkpoints/model",
+        "wikisql": "./results/fit/graceful-sky-50/nujq58r9/checkpoints/model",
+        "fiben": "./results/fit/graceful-sky-50/nujq58r9/checkpoints/model",
     }
 
     for data, tests in datasets.items():
@@ -229,5 +227,4 @@ if __name__ == "__main__":
                     str(tune),
                     *map(lambda x: str(round(x * 100, 2)), result.values()),
                 )
-
-    console.print(table)
+                console.print(table)
