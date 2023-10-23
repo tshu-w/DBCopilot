@@ -14,9 +14,14 @@ from transformers import (
     get_scheduler,
 )
 
-from src.models.modules import Recall
+from src.models.modules import ConstraintDecoder, Recall
 from src.utils.collators import Text2SchemaCollator
 from src.utils.helpers import chunks, deserialize_schema
+
+
+def prefix_allowed_tokens_fn(_batch_id, sent, constraint_decoder):
+    allowed_tokens = constraint_decoder(sent.tolist())
+    return allowed_tokens
 
 
 class SchemaRouting(pl.LightningModule):
@@ -25,6 +30,7 @@ class SchemaRouting(pl.LightningModule):
         model_name_or_path: str,
         generator_config: dict = {
             "max_new_tokens": 512,
+            "constraint_decoding": True,
         },
         sep_token: str = "<sep>",
         max_length: int | None = 512,
@@ -69,6 +75,24 @@ class SchemaRouting(pl.LightningModule):
         self.pre_dataloader_idx = -1
 
         self.outputs = defaultdict(list)
+
+    def setup(self, stage: str) -> None:
+        # prepare prefix_allowed_tokens_fn for constraint decoding
+        constraint_decoding = self.generator_config.pop("constraint_decoding", False)
+        if (
+            constraint_decoding
+            and self.generator_config.get("prefix_allowed_tokens_fn", None) is None
+        ):
+            constraint_decoder = ConstraintDecoder(
+                tokenizer=self.tokenizer,
+                G=self.trainer.datamodule.G,
+            )
+            partial_prefix_allowed_tokens_fn = partial(
+                prefix_allowed_tokens_fn, constraint_decoder=constraint_decoder
+            )
+            self.generator_config[
+                "prefix_allowed_tokens_fn"
+            ] = partial_prefix_allowed_tokens_fn
 
     def forward(self, **inputs):
         return self.model(**inputs)
