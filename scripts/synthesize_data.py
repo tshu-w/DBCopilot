@@ -108,7 +108,7 @@ if __name__ == "__main__":
         "fiben",
     ]
     ckpt_paths = [
-        "results/fit/swift-music-32/6eb9bfft/checkpoints/epoch=9-step=9430.ckpt"
+        "results/fit/desert-plant-57/vdn2mg9m/checkpoints/epoch=19-step=14120.ckpt"
     ]
     n_walks_lst = [
         100000,
