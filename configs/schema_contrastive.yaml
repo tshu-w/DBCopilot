@@ -1,6 +1,6 @@
 seed_everything: 123
 trainer:
-  max_epochs: 5
+  max_epochs: 10
   strategy: ddp_find_unused_parameters_true
   callbacks+:
     - class_path: ModelCheckpoint

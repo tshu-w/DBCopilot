@@ -1,18 +1,14 @@
 seed_everything: 123
 trainer:
-  max_epochs: 10
+  max_epochs: 20
 model:
   class_path: src.models.SchemaRouting
   init_args:
     model_name_or_path: ./models/t5-base
     max_length: 256
     generator_config:
-      max_new_tokens: 256
-      # num_beams: 10
-      # num_beam_groups: 10
-      # diversity_penalty: 1.0
-      # num_return_sequences: 10
+      max_new_tokens: 64
     weight_decay: 0.0
-    learning_rate: 1.0e-04
+    learning_rate: 5.0e-05
     scheduler_type: linear
     warmup_steps: 0

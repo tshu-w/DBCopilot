@@ -1,6 +1,6 @@
 seed_everything: 123
 trainer:
-  max_epochs: 10
+  max_epochs: 20
   callbacks+:
     - class_path: ModelCheckpoint
       init_args:
@@ -11,10 +11,10 @@ model:
   init_args:
     model_name_or_path: ./models/t5-base
     generator_config:
-      max_new_tokens: 256
+      max_new_tokens: 128
     max_length: 256
     weight_decay: 0.0
-    learning_rate: 1.0e-04
+    learning_rate: 5.0e-05
     scheduler_type: linear
     warmup_steps: 0
 data:
