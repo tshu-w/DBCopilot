@@ -10,7 +10,7 @@ trainer:
 model:
   class_path: src.models.SentenceEncoder
   init_args:
-    model_name_or_path: sentence-transformers/all-mpnet-base-v2
+    model_name_or_path: ./models/all-mpnet-base-v2
     max_length: 256
     weight_decay: 0.0
     learning_rate: 5.0e-05
