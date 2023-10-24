@@ -29,7 +29,7 @@ def synthesize_data(
     G = schema2graph(schemas)
 
     files = list(Path("./data").glob(f"{dataset}*/*.json"))
-    files = [f for f in files if f.name not in ["schemas.json", "synthetic.json"]]
+    files = [f for f in files if f.name.startswith(("train", "test"))]
     data = []
     for f in files:
         with f.open() as f:
