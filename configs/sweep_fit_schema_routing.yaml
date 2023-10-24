@@ -7,7 +7,6 @@ fit:
     - configs/data/spider.yaml
     - configs/data/bird.yaml
     - configs/data/fiben.yaml
-    - configs/data/wikisql.yaml
   override_kwargs:
     seed_everything:
       - 123

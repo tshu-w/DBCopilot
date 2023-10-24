@@ -167,7 +167,6 @@ if __name__ == "__main__":
         "spider": ["spider", "spider_syn", "spider_realistic", "spider_dr"],
         "bird": ["bird"],
         "fiben": ["fiben"],
-        "wikisql": ["wikisql"],
     }
     resolutions = [
         "database",
@@ -185,7 +184,6 @@ if __name__ == "__main__":
     tuned_model = {
         "spider": "./results/fit/graceful-sky-50/nujq58r9/checkpoints/model",
         "bird": "./results/fit/graceful-sky-50/nujq58r9/checkpoints/model",
-        "wikisql": "./results/fit/graceful-sky-50/nujq58r9/checkpoints/model",
         "fiben": "./results/fit/graceful-sky-50/nujq58r9/checkpoints/model",
     }
 

@@ -105,7 +105,6 @@ if __name__ == "__main__":
     datasets = [
         "spider",
         "bird",
-        "wikisql",
         "fiben",
     ]
     ckpt_paths = [
@@ -114,7 +113,6 @@ if __name__ == "__main__":
     n_walks_lst = [
         100000,
         100000,
-        500000,
         100000,
     ]
 

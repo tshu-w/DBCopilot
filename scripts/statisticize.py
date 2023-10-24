@@ -12,7 +12,8 @@ if __name__ == "__main__":
     for dataset in [
         "spider",
         "bird",
-        "wikisql",
+        # "wikisql",
+        "fiben",
         "spider_syn",
         "spider_realistic",
         "spider_dr",
