@@ -146,7 +146,7 @@ class SchemaRouting(pl.LightningModule):
             batch_idx * global_bs : (batch_idx + 1) * global_bs
         ]
         raw_data["pred_texts"] = pred_texts
-        raw_data["pred_schemas"] = pred_schemas
+        raw_data["pred_schemas"] = self.aggregate_preds(pred_schemas)
         preds = [{k: raw_data[k][i] for k in raw_data} for i in range(batch_size)]
         self.outputs[prefix[:-1]].extend(preds)
 
@@ -169,25 +169,42 @@ class SchemaRouting(pl.LightningModule):
     ) -> STEP_OUTPUT | None:
         return self.evaluation_step(batch, "test", batch_idx, dataloader_idx)
 
-    def update_metrics(self, preds: list[dict], metric_key: str):
+    def aggregate_preds(self, pred_schemas: list[list[dict]]) -> list[list[dict]]:
+        aggregated = []
+        for preds in pred_schemas:
+            databases = list(OrderedDict.fromkeys(s["database"] for s in preds))
+            aggregated.append(
+                [
+                    {
+                        "database": db,
+                        "tables": list(
+                            map(
+                                lambda x: x[0],
+                                Counter(
+                                    chain(
+                                        *(
+                                            s["tables"]
+                                            for s in preds
+                                            if s["database"] == db
+                                        )
+                                    )
+                                ).most_common(),
+                            )
+                        ),
+                    }
+                    for db in databases
+                ]
+            )
+
+        return aggregated
+
+    def update_metrics(self, preds: list[dict], metric_key: str) -> None:
         pred_databases = []
         pred_tables = []
         for it in preds:
-            databases = list(
-                OrderedDict.fromkeys(s["database"] for s in it["pred_schemas"])
-            )
+            databases = [s["database"] for s in it["pred_schemas"]]
             tables = [
-                f"{db}.{t}"
-                for db in databases
-                for t, _ in Counter(
-                    chain(
-                        *(
-                            s["tables"]
-                            for s in it["pred_schemas"]
-                            if s["database"] == db
-                        )
-                    )
-                ).most_common()
+                f"{s['database']}.{t}" for s in it["pred_schemas"] for t in s["tables"]
             ]
             pred_databases.append(databases)
             pred_tables.append(tables)
