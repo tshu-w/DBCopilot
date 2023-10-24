@@ -1,3 +1,4 @@
+import random
 from dataclasses import dataclass
 from typing import Literal
 
@@ -113,11 +114,15 @@ class ContrastiveCollator:
             question, schema = instance["question"], instance["schema"]
             questions.append(question)
 
-            text = " ".join(
-                f"{tbl['name']} {' '.join(tbl['columns'])}"
-                for tbl in schema["metadata"]
-            )
-            text = f"{schema['database']} {text}"
+            elements = [
+                schema["database"],
+                *(
+                    f"{tbl['name']} {' '.join(tbl['columns'])}"
+                    for tbl in schema["metadata"]
+                ),
+            ]
+            random.shuffle(elements)
+            text = " ".join(elements)
             schemas.append(text)
 
         features1 = self.tokenizer(
