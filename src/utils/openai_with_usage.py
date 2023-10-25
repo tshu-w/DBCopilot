@@ -41,7 +41,7 @@ def get_openai_token_cost_for_model(
 class OpenAI(guidance.llms.OpenAI):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.usage = collections.defaultdict(int)
+        self.usage = collections.Counter()
 
     def get_usage_cost_usd(self, usage=None):
         usage = self.usage if usage is None else usage
@@ -65,14 +65,17 @@ class OpenAISession(guidance.llms._openai.OpenAISession):
         return result
 
 
+guidance.llms.OpenAI = OpenAI
+
+
 if __name__ == "__main__":
     guidance.llm = guidance.llms.OpenAI("text-davinci-003")
-    guidance(
+    response = guidance(
         """The best thing about the beach is {{~gen 'best' temperature=0.7 max_tokens=7 stream=False}}"""
     )()
-    guidance.llm = OpenAI("text-davinci-003")
-    guidance(
-        """The best thing about the beach is {{~gen 'best' temperature=0.7 max_tokens=7 stream=False}}"""
+    print(response.llm.usage)
+    response = guidance(
+        """The best thing about the sunshine is {{~gen 'best' temperature=0.7 max_tokens=7 stream=False}}"""
     )()
+    print(response.llm.usage)
     print(guidance.llm.usage)
-    print(guidance.llm.get_usage_cost_usd())

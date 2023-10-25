@@ -143,6 +143,9 @@ def spider(ds_path=RAW_DATA_PATH / "spider", tgt_path=TGT_PATH / "spider"):
             ds_path / "database", tgt_path / "databases", dirs_exist_ok=True
         )
 
+    for f in ["dev_gold.sql", "tables.json"]:
+        shutil.copy(ds_path / f, tgt_path)
+
     def convert_data(data):
         for record in tqdm(data):
             metadata = extract_metadata(record["query"], databases[record["db_id"]])
@@ -265,6 +268,10 @@ def bird(ds_path=RAW_DATA_PATH / "bird", tgt_path=TGT_PATH / "bird"):
             dirs_exist_ok=True,
         )
 
+    for f in ["dev.json", "dev.sql"]:
+        tf = f.replace("dev", "dev_gold")
+        shutil.copy(ds_path / "dev" / f, tgt_path / tf)
+
     def convert_data(data):
         for record in tqdm(data[:]):
             db_id = record["db_id"]
@@ -337,63 +344,12 @@ def fiben(
     convert_data(dev_data)
     write_data(tgt_path / "test.json", dev_data)
 
+    gold_sql = [
+        f'{record["sql"]}\t{record["schema"]["database"]}\n' for record in dev_data
+    ]
 
-def wikisql(
-    ds_path=RAW_DATA_PATH / "unified-text2sql-benchmark/unified/wikisql",
-    tgt_path=TGT_PATH / "wikisql",
-):
-    databases = get_dataset_schemas("wikisql")
-    tgt_path.mkdir(exist_ok=True, parents=True)
-    write_data(tgt_path / "schemas.json", databases)
-
-    if COPY_DATABASES:
-        shutil.copytree(
-            ds_path / "database", tgt_path / "databases", dirs_exist_ok=True
-        )
-
-    def convert_data(data):
-        for record in tqdm(data[:]):
-            try:
-                metadata = extract_metadata(record["query"], databases[record["db_id"]])
-                record["schema"] = {
-                    "database": record.pop("db_id"),
-                    "metadata": metadata,
-                }
-                record["sql"] = record.pop("query")
-                for key in [
-                    "query_toks",
-                    "query_toks_no_value",
-                    "question_toks",
-                ]:
-                    record.pop(key, None)
-            except Exception:
-                data.remove(record)
-
-    train_files = [ds_path / "train.jsonl", ds_path / "dev.jsonl"]
-    train_data = []
-    for f in train_files:
-        with f.open() as f:
-            for line in f:
-                train_data.append(json.loads(line))
-
-    convert_data(train_data)
-    write_data(tgt_path / "train.json", train_data)
-
-    dev_data = []
-    with (ds_path / "dev.jsonl").open() as f:
-        for line in f:
-            dev_data.append(json.loads(line))
-
-    convert_data(dev_data)
-    write_data(tgt_path / "dev.json", dev_data)
-
-    test_data = []
-    with (ds_path / "test.jsonl").open() as f:
-        for line in f:
-            test_data.append(json.loads(line))
-
-    convert_data(test_data)
-    write_data(tgt_path / "test.json", test_data)
+    with (tgt_path / "dev_gold.sql").open("w") as f:
+        f.writelines(gold_sql)
 
 
 if __name__ == "__main__":
@@ -403,4 +359,3 @@ if __name__ == "__main__":
     dr_spider()
     bird()
     fiben()
-    # wikisql()
