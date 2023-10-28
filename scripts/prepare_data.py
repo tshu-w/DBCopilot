@@ -192,6 +192,13 @@ def spider_syn(ds_path=RAW_DATA_PATH / "spider-syn", tgt_path=TGT_PATH / "spider
     convert_data(dev_data)
     write_data(tgt_path / "test.json", dev_data)
 
+    gold_sql = [
+        f'{record["sql"]}\t{record["schema"]["database"]}\n' for record in dev_data
+    ]
+
+    with (tgt_path / "dev_gold.sql").open("w") as f:
+        f.writelines(gold_sql)
+
 
 def spider_realistic(
     ds_path=RAW_DATA_PATH / "spider-realistic", tgt_path=TGT_PATH / "spider_realistic"
@@ -214,6 +221,13 @@ def spider_realistic(
     dev_data = load_data(ds_path / "spider-realistic.json")
     convert_data(dev_data)
     write_data(tgt_path / "test.json", dev_data)
+
+    gold_sql = [
+        f'{record["sql"]}\t{record["schema"]["database"]}\n' for record in dev_data
+    ]
+
+    with (tgt_path / "dev_gold.sql").open("w") as f:
+        f.writelines(gold_sql)
 
 
 def dr_spider(
@@ -249,6 +263,13 @@ def dr_spider(
             write_data(tgt_path / f"test_{dir.name.lower()}.json", dev_data)
 
     write_data(tgt_path / "test.json", dev_data)
+
+    gold_sql = [
+        f'{record["sql"]}\t{record["schema"]["database"]}\n' for record in dev_data
+    ]
+
+    with (tgt_path / "dev_gold.sql").open("w") as f:
+        f.writelines(gold_sql)
 
 
 def bird(ds_path=RAW_DATA_PATH / "bird", tgt_path=TGT_PATH / "bird"):
