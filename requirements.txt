@@ -17,6 +17,7 @@ graph-walker
 guidance
 nltk
 pandas
+pytorch_metric_learning
 retriv
 sqlglot
 sqlparse

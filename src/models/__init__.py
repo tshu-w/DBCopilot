@@ -1,5 +1,5 @@
+from .schema_encoder import SchemaEncoder
 from .schema_questioning import SchemaQuestioning
 from .schema_routing import SchemaRouting
-from .sentence_encoder import SentenceEncoder
 
-__all__ = ["SchemaRouting", "SchemaQuestioning", "SentenceEncoder"]
+__all__ = ["SchemaEncoder", "SchemaRouting", "SchemaQuestioning"]

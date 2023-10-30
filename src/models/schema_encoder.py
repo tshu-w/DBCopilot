@@ -9,12 +9,13 @@ from src.models.modules import BarlowTwinsLoss, Pooler
 from src.utils.collators import ContrastiveCollator
 
 
-class SentenceEncoder(pl.LightningModule):
+class SchemaEncoder(pl.LightningModule):
     def __init__(
         self,
         model_name_or_path: str,
         max_length: int | None = None,
         pooler_type: Pooler.valid_types = "average",
+        with_mlp: bool = False,
         learning_rate: float = 5e-5,
         warmup_steps: int = 0,
         weight_decay: float = 0.0,
@@ -30,11 +31,15 @@ class SentenceEncoder(pl.LightningModule):
         )
         self.model = AutoModel.from_pretrained(model_name_or_path)
         self.pooler = Pooler(pooler_type=pooler_type)
+        self.with_mlp = with_mlp
         self.loss_func = BarlowTwinsLoss(dim=self.model.config.hidden_size)
 
     def forward(self, inputs) -> Any:
         outputs = self.model(**inputs)
         pooled_output = self.pooler(outputs, inputs.attention_mask)
+        if self.with_mlp:
+            pooled_output = self.model.pooler.dense(pooled_output)
+            pooled_output = self.model.pooler.activation(pooled_output)
         return pooled_output
 
     def common_step(self, batch) -> STEP_OUTPUT:

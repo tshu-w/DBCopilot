@@ -1,24 +1,17 @@
 seed_everything: 123
 trainer:
-  max_epochs: 10
-  strategy: ddp_find_unused_parameters_true
+  max_epochs: 5
   callbacks+:
     - class_path: ModelCheckpoint
       init_args:
         save_top_k: -1
         every_n_epochs: 1
 model:
-  class_path: src.models.SentenceEncoder
+  class_path: src.models.SchemaEncoder
   init_args:
     model_name_or_path: ./models/all-mpnet-base-v2
     max_length: 256
     weight_decay: 0.0
-    learning_rate: 5.0e-05
+    learning_rate: 2.0e-05
     scheduler_type: linear
     warmup_steps: 0
-data:
-  class_path: src.datamodules.SchemaText
-  init_args:
-    dataset: ""
-    batch_size: 32
-    num_workers: 8
