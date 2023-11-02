@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Literal
 
 import numpy as np
-from joblib import Memory
 from lightning.fabric.utilities.seed import seed_everything
 from ranx import Qrels, Run, evaluate
 from retriv import DenseRetriever, SparseRetriever
@@ -13,7 +12,6 @@ from rich.console import Console
 from rich.table import Table
 
 METRICS = ["recall@1", "recall@5", "recall@10", "recall@25", "recall@50"]
-memory = Memory(Path.home() / ".cache" / "joblib", verbose=0)
 
 
 def generate_collection(schemas, resolution) -> dict[str, str]:
@@ -70,9 +68,12 @@ def get_retriever(
     retriever_class: SparseRetriever | DenseRetriever = SparseRetriever,
     retriever_kwargs: dict | None = None,
     tune: bool = False,
+    force: bool = True,
 ) -> SparseRetriever | DenseRetriever:
     try:
         retriever = retriever_class.load(retriever_kwargs["index_name"])
+        if force:
+            raise FileNotFoundError
     except FileNotFoundError:
         retriever = retriever_class(**retriever_kwargs)
         with Path(f"data/{data_name}/schemas.json").open() as f:
@@ -110,7 +111,6 @@ def get_retriever(
     return retriever
 
 
-@memory.cache
 def get_qrels_and_results(
     data_name: str,
     test_name: str,
@@ -182,9 +182,9 @@ if __name__ == "__main__":
     ]
     default_model = "sentence-transformers/all-mpnet-base-v2"
     tuned_model = {
-        "spider": "./results/fit/graceful-sky-50/nujq58r9/checkpoints/model",
-        "bird": "./results/fit/graceful-sky-50/nujq58r9/checkpoints/model",
-        "fiben": "./results/fit/graceful-sky-50/nujq58r9/checkpoints/model",
+        "spider": "./results/fit/sweet-silence-87/5xd7co63/checkpoints/model",
+        "bird": "./results/fit/dark-sunset-86/ph81yhxd/checkpoints/model",
+        "fiben": "./results/fit/volcanic-leaf-88/hyejgh9x/checkpoints/model",
     }
 
     for data, tests in datasets.items():
