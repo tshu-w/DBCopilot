@@ -11,7 +11,7 @@ test:
         max_new_tokens: 30
         num_beams: 10
         num_beam_groups: 10
-        diversity_penalty: 5.0
+        diversity_penalty: 2.0
         length_penalty: 2.0
         num_return_sequences: 10
     data.batch_size:
