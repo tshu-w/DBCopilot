@@ -1,4 +1,4 @@
-description: DBCopilot
+description: tianshu2020_DBCopilot
 
 environment:
   image: docker.cipsup.cn/wangtianshu/base
