@@ -12,5 +12,5 @@ fit:
       - 123
     data.train_data:
       - synthetic
-      - original
-      - all
+      # - original
+      # - all
