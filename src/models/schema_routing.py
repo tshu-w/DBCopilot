@@ -61,7 +61,12 @@ class SchemaRouting(pl.LightningModule):
             {"dR@1": Recall(top_k=1), "dR@5": Recall(top_k=5)}
         )
         tbl_metrics = MetricCollection(
-            {"tR@5": Recall(top_k=5), "tR@25": Recall(top_k=25)}
+            {
+                "tR@5": Recall(top_k=5),
+                "tR@10": Recall(top_k=10),
+                "tR@15": Recall(top_k=15),
+                "tR@20": Recall(top_k=20),
+            }
         )
         self.metrics = torch.nn.ModuleDict()
         for step in ["validation", "test"]:

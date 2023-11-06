@@ -1,5 +1,6 @@
 import itertools
 import json
+from collections import Counter
 from operator import itemgetter
 from pathlib import Path
 from typing import Literal
@@ -11,7 +12,9 @@ from retriv import DenseRetriever, SparseRetriever
 from rich.console import Console
 from rich.table import Table
 
-METRICS = ["recall@1", "recall@5", "recall@10", "recall@25", "recall@50"]
+DB_METRICS = ["recall@1", "recall@5"]
+TBL_METRICS = ["recall@5", "recall@10", "recall@15", "recall@20"]
+METRICS = ["DR@1", "DR@5", "TR@5", "TR@10", "TR@15", "TR@20"]
 
 
 def generate_collection(schemas, resolution) -> dict[str, str]:
@@ -71,9 +74,9 @@ def get_retriever(
     force: bool = True,
 ) -> SparseRetriever | DenseRetriever:
     try:
-        retriever = retriever_class.load(retriever_kwargs["index_name"])
         if force:
             raise FileNotFoundError
+        retriever = retriever_class.load(retriever_kwargs["index_name"])
     except FileNotFoundError:
         retriever = retriever_class(**retriever_kwargs)
         with Path(f"data/{data_name}/schemas.json").open() as f:
@@ -111,17 +114,16 @@ def get_retriever(
     return retriever
 
 
-def get_qrels_and_results(
+def retrieve_schemas(
     data_name: str,
     test_name: str,
-    resolution: Literal["database", "table", "column"],
     retriever_class: SparseRetriever | DenseRetriever = SparseRetriever,
     retriever_kwargs: dict | None = None,
     tune: bool = False,
 ):
     retriever = get_retriever(
         data_name=data_name,
-        resolution=resolution,
+        resolution="table",
         retriever_class=retriever_class,
         retriever_kwargs=retriever_kwargs,
         tune=tune,
@@ -134,44 +136,29 @@ def get_qrels_and_results(
             test.extend(json.load(f))
 
     queries = [{"id": str(i), "text": it["question"]} for i, it in enumerate(test)]
-    results = retriever.bsearch(queries, show_progress=True, cutoff=100)
+    tbl_results = retriever.bsearch(queries, show_progress=True, cutoff=100)
+    db_results = {
+        q_id: dict(Counter({k.split(".")[0]: v for k, v in doc_ids.items()}))
+        for q_id, doc_ids in tbl_results.items()
+    }
 
-    qrels = generate_qrels(test, resolution)
+    db_qrels = generate_qrels(test, resolution="database")
+    tbl_qrels = generate_qrels(test, resolution="table")
 
-    return qrels, results
+    db_scores = evaluate(Qrels(db_qrels), Run(db_results), metrics=DB_METRICS)
+    tbl_scores = evaluate(Qrels(tbl_qrels), Run(tbl_results), metrics=TBL_METRICS)
 
-
-def retrieve_schemas(
-    data_name: str,
-    test_name: str,
-    resolution: Literal["database", "table", "column"],
-    retriever_class: SparseRetriever | DenseRetriever = SparseRetriever,
-    retriever_kwargs: dict | None = None,
-    tune: bool = False,
-):
-    qrels, results = get_qrels_and_results(
-        data_name=data_name,
-        test_name=test_name,
-        resolution=resolution,
-        retriever_class=retriever_class,
-        retriever_kwargs=retriever_kwargs,
-        tune=tune,
-    )
-    return evaluate(Qrels(qrels), Run(results), metrics=METRICS)
+    return [*db_scores.values(), *tbl_scores.values()]
 
 
 if __name__ == "__main__":
     console = Console()
-    table = Table(*["Data", "Test Set", "Resolution", "Retriever", "Tuned", *METRICS])
+    table = Table(*["Data", "Test Set", "Retriever", "Tuned", *METRICS])
     datasets = {
         "spider": ["spider", "spider_syn", "spider_realistic", "spider_dr"],
         "bird": ["bird"],
         "fiben": ["fiben"],
     }
-    resolutions = [
-        "database",
-        "table",
-    ]
     retriever_classes = [
         SparseRetriever,
         DenseRetriever,
@@ -180,26 +167,24 @@ if __name__ == "__main__":
         False,
         True,
     ]
-    default_model = "sentence-transformers/all-mpnet-base-v2"
+    default_model = "./models/all-mpnet-base-v2"
     tuned_model = {
-        "spider": "./results/fit/sweet-silence-87/5xd7co63/checkpoints/model",
-        "bird": "./results/fit/dark-sunset-86/ph81yhxd/checkpoints/model",
-        "fiben": "./results/fit/volcanic-leaf-88/hyejgh9x/checkpoints/model",
+        "spider": "./results/fit/rosy-elevator-178/xpqo1p3h/checkpoints/model/",
+        "bird": "./results/fit/colorful-frog-176/sk0or8fo/checkpoints/model",
+        "fiben": "./results/fit/cool-glade-177/nh0tbwuh/checkpoints/model",
     }
 
     for data, tests in datasets.items():
         print(data)
         for test in tests:
             print("\t", test)
-            for resolution, retriever_class, tune in itertools.product(
-                resolutions, retriever_classes, tunes
-            ):
+            for retriever_class, tune in itertools.product(retriever_classes, tunes):
                 retriever_type = (
                     "sparse" if retriever_class == SparseRetriever else "dense"
                 )
-                print("\t\t", resolution, retriever_type)
+                print("\t\t", retriever_type)
                 retriever_kwargs = {
-                    "index_name": f"{data}/{resolution}_{retriever_type}_{str(tune).lower()}.index"
+                    "index_name": f"{data}/table_{retriever_type}_{str(tune).lower()}.index"
                 }
                 if retriever_class == DenseRetriever:
                     retriever_kwargs = {
@@ -209,10 +194,9 @@ if __name__ == "__main__":
                     }
 
                 seed_everything(42)
-                result = retrieve_schemas(
+                scores = retrieve_schemas(
                     data,
                     test,
-                    resolution,
                     retriever_class,
                     retriever_kwargs,
                     tune,
@@ -220,9 +204,8 @@ if __name__ == "__main__":
                 table.add_row(
                     data,
                     test,
-                    resolution,
                     retriever_class.__name__,
                     str(tune),
-                    *map(lambda x: str(round(x * 100, 2)), result.values()),
+                    *map(lambda x: str(round(x * 100, 2)), scores),
                 )
                 console.print(table)
