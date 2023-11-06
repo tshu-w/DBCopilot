@@ -4,7 +4,7 @@ environment:
   image: docker.cipsup.cn/wangtianshu/base
   force_pull_image: true
   environment_variables:
-    - PATH=/home/tianshu2020/.local/share/conda/envs/schema-routing/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    - PATH=/home/tianshu2020/.local/share/conda/envs/DBCopilot/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 bind_mounts:
   - host_path: /ceph_home/tianshu2020/resources/data/dbcopilot/
