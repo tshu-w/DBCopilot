@@ -16,7 +16,7 @@ from transformers import (
 
 from src.models.modules import ConstraintDecoder, Recall
 from src.utils.collators import Text2SchemaCollator
-from src.utils.helpers import chunks, deserialize_schema
+from src.utils.helpers import chunks, deserialize_schema, label2schema
 
 
 def prefix_allowed_tokens_fn(_batch_id, sent, constraint_decoder):
@@ -32,6 +32,7 @@ class SchemaRouting(pl.LightningModule):
             "max_new_tokens": 512,
             "constraint_decoding": True,
         },
+        relational: bool = True,
         sep_token: str = "<sep>",
         max_length: int | None = 512,
         weight_decay: float = 0.0,
@@ -55,6 +56,7 @@ class SchemaRouting(pl.LightningModule):
         self.collate_fn = Text2SchemaCollator(
             tokenizer=self.tokenizer,
             max_length=max_length,
+            relational=relational,
         )
 
         db_metrics = MetricCollection(
@@ -136,10 +138,17 @@ class SchemaRouting(pl.LightningModule):
                 outputs, skip_special_tokens=False, clean_up_tokenization_spaces=False
             )
         ]
-        _label2schema = partial(
-            deserialize_schema,
-            separator=self.tokenizer.sep_token,
-        )
+        if self.hparams.relational:
+            _label2schema = partial(
+                deserialize_schema,
+                separator=self.tokenizer.sep_token,
+            )
+        else:
+            _label2schema = partial(
+                label2schema,
+                separator=self.tokenizer.sep_token,
+                tbl2db=self.trainer.datamodule.tbl2db,
+            )
         pred_schemas = [_label2schema(s) for s in pred_texts]
         batch_size = len(batch["input_ids"])
         chunk_size = len(pred_schemas) // batch_size

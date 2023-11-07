@@ -167,9 +167,7 @@ def stringize_schema(schema: dict) -> dict:
     return f"{schema['database']}\n{tables}"
 
 
-def schema2label(
-    schema: dict, separator: str, add_db: bool = True, shuffle: bool = True
-) -> str:
+def schema2label(schema: dict, separator: str, shuffle: bool = True) -> str:
     """
     Transform a dict of database schema into a string of labels.
 
@@ -182,7 +180,7 @@ def schema2label(
       ]
     }
 
-    Output: (<database_name> )<table_name_1> <table_name_2> <table_name_3>
+    Output: <table_name_1> <table_name_2> <table_name_3>
     """
     # Check separator is not in labels
     assert separator not in schema["database"]
@@ -192,34 +190,30 @@ def schema2label(
     if shuffle:
         random.shuffle(tables)
     tables = separator.join(tables)
-    return f"{schema['database']}{separator}{tables}" if add_db else tables
+    return tables
 
 
-def label2schema(
-    s: str, separator: dict, add_db: bool = True, tbl2db: dict = {}
-) -> dict:
+def label2schema(s: str, separator: str, tbl2db: dict) -> dict:
     """
     Transform a string of labels into a dict of database schema.
 
-    Input: (<database_name> )<table_name_1> <table_name_2> <table_name_3>
+    Input: <table_name_1> <table_name_2> <table_name_3>
 
-    Output: {"<database_name>": ["<table_name_1>", "<table_name_2>", "<table_name_3>"]}
+    Output: {"database": "<database_name>", "tables": ["<table_name_1>", "<table_name_2>", "<table_name_3>"]}
     """
     try:
         # Remove space after separator for T5,
         # see https://github.com/huggingface/transformers/issues/24743
         s = s.replace(f"{separator} ", f"{separator}")
 
-        schema = {}
-        if add_db:
-            database, *tables = s.split(f"{separator}")
-            schema[database] = list(tables)
-        else:
-            tables = s.split(f"{separator}")
-            dbs = Counter(table for table in tables if table in tbl2db)
-            database = dbs.most_common(1)[0][0]
-            schema[database] = tables
+        tables = s.split(f"{separator}")
+        dbs = [db for tbl in tables if tbl in tbl2db for db in tbl2db[tbl]]
+        database = Counter(dbs).most_common(1)[0][0]
+        schema = {
+            "database": database,
+            "tables": tables,
+        }
 
         return schema
     except Exception:
-        return {}
+        return {"database": "", "tables": []}

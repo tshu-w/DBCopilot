@@ -5,6 +5,9 @@ test:
     - "results/fit/olive-firefly-59/jlg43j5x/checkpoints/epoch=19-step=56260.ckpt" # Spider
     - "results/fit/sandy-eon-59/yuw9te19/checkpoints/epoch=19-step=56260.ckpt" # Bird
     - "results/fit/driven-firefly-61/klat9sjw/checkpoints/epoch=19-step=56260.ckpt" # Fiben
+    # - "results/fit/blooming-sea-224/ks0c4axp/checkpoints/epoch=19-step=56260.ckpt" # Spider
+    # - "results/fit/rose-resonance-223/tc71guso/checkpoints/epoch=19-step=56260.ckpt" # Bird
+    # - "results/fit/scarlet-fog-222/d7t8tlec/checkpoints/epoch=19-step=56260.ckpt" # Fiben
   override_kwargs:
     model.generator_config:
       - constraint_decoding: true
@@ -16,3 +19,5 @@ test:
         num_return_sequences: 10
     data.batch_size:
       - 64
+    trainer.logger:
+      - true

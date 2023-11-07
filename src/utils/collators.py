@@ -5,13 +5,14 @@ import networkx as nx
 import torch
 from transformers import PreTrainedTokenizer
 
-from .helpers import serialize_schema, stringize_schema
+from .helpers import schema2label, serialize_schema, stringize_schema
 
 
 @dataclass
 class Text2SchemaCollator:
     tokenizer: PreTrainedTokenizer
     max_length: int | None = None
+    relational: bool = True
     G: nx.Graph | None = None
     label_pad_token_id: int = -100
 
@@ -19,9 +20,12 @@ class Text2SchemaCollator:
         inputs, targets = [], []
         for instance in batch:
             question, schema = instance["question"], instance["schema"]
-            target = serialize_schema(
-                schema, self.G, separator=self.tokenizer.sep_token
-            )
+            if self.relational:
+                target = serialize_schema(
+                    schema, self.G, separator=self.tokenizer.sep_token
+                )
+            else:
+                target = schema2label(schema, separator=self.tokenizer.sep_token)
             targets.append(target)
 
             if question is None:

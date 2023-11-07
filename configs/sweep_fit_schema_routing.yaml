@@ -10,6 +10,9 @@ fit:
   override_kwargs:
     seed_everything:
       - 123
+    model.relational:
+      - true
+      # - false
     data.train_data:
       - synthetic
       # - original

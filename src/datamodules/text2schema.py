@@ -1,4 +1,5 @@
 import json
+from collections import defaultdict
 from pathlib import Path
 from typing import Literal
 
@@ -61,6 +62,12 @@ class Text2Schema(pl.LightningDataModule):
                 self.datasets["validation"] = datasets_split["test"]
 
             self.G = schema2graph(self.schemas)
+
+            if not self.trainer.model.hparams.relational:
+                self.tbl2db = defaultdict(list)
+                for database, tables in self.schemas.items():
+                    for table in tables:
+                        self.tbl2db[table["name"]].append(database)
 
             self.test_splits = [x for x in self.datasets.keys() if "test" in x]
 
