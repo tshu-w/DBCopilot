@@ -4,3 +4,6 @@
 [submodule "DAMO-ConvAI"]
 	path = src/vendor/DAMO-ConvAI
 	url = https://github.com/AlibabaResearch/DAMO-ConvAI.git
+[submodule "CRUSH4SQL"]
+	path = src/vendor/CRUSH4SQL
+	url = https://github.com/iMayK/CRUSH4SQL.git
