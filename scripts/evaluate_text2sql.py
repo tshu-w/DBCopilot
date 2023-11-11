@@ -155,9 +155,8 @@ def evaluate_text2sql(
     if override or not pred_file.exists():
         model = guidance.llms.OpenAI(model_name)
         dev = prepare_schemas(test, resolution, routing_file)
-        loop = asyncio.get_event_loop()
         cot = True if resolution.endswith("cot") else False
-        preds = loop.run_until_complete(
+        preds = asyncio.run(
             gather_with_concurrency(
                 32, *[text2sql(it["question"], it["schemas"], model, cot) for it in dev]
             )

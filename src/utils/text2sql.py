@@ -204,8 +204,7 @@ if __name__ == "__main__":
         },
     ]
 
-    loop = asyncio.get_event_loop()
-    sqls = loop.run_until_complete(
+    sqls = asyncio.run(
         gather_with_concurrency(
             3,
             *[
