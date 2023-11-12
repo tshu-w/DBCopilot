@@ -129,11 +129,9 @@ def retrieve_schemas(
         tune=tune,
     )
 
-    test = []
-    test_paths = (Path("data") / test_name).glob("test*.json")
-    for pth in test_paths:
-        with pth.open() as f:
-            test.extend(json.load(f))
+    test_path = Path("data") / test_name / "test.json"
+    with test_path.open() as f:
+        test = json.load(f)
 
     queries = [{"id": str(i), "text": it["question"]} for i, it in enumerate(test)]
     tbl_results = retriever.bsearch(queries, show_progress=True, cutoff=100)
