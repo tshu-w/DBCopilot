@@ -137,10 +137,14 @@ def retrieve_schemas(
 
     queries = [{"id": str(i), "text": it["question"]} for i, it in enumerate(test)]
     tbl_results = retriever.bsearch(queries, show_progress=True, cutoff=100)
-    db_results = {
-        q_id: dict(Counter({k.split(".")[0]: v for k, v in doc_ids.items()}))
-        for q_id, doc_ids in tbl_results.items()
-    }
+
+    db_results = {}
+    for q_id, doc_scores in tbl_results.items():
+        scores = Counter()
+        for doc_id, doc_score in doc_scores.items():
+            db = doc_id.split(".")[0]
+            scores[db] += doc_score
+        db_results[q_id] = dict(scores)
 
     db_qrels = generate_qrels(test, resolution="database")
     tbl_qrels = generate_qrels(test, resolution="table")
