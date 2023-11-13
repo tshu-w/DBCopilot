@@ -145,7 +145,7 @@ def retrieve_schemas(
         for doc_id, doc_score in doc_scores.items():
             db = doc_id.split(".")[0]
             scores[db] += doc_score
-        db_results[q_id] = dict(scores)
+        db_results[str(q_id)] = dict(scores)
 
     db_qrels = generate_qrels(test, resolution="database")
     tbl_qrels = generate_qrels(test, resolution="table")
