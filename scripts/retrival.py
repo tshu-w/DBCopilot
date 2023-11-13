@@ -5,6 +5,7 @@ from operator import itemgetter
 from pathlib import Path
 from typing import Literal
 
+import nltk
 import numpy as np
 from lightning.fabric.utilities.seed import seed_everything
 from ranx import Qrels, Run, evaluate
@@ -15,6 +16,8 @@ from rich.table import Table
 DB_METRICS = ["recall@1", "recall@5"]
 TBL_METRICS = ["recall@5", "recall@10", "recall@15", "recall@20"]
 METRICS = ["DR@1", "DR@5", "TR@5", "TR@10", "TR@15", "TR@20"]
+
+nltk.download = lambda *args, **kwargs: None
 
 
 def generate_collection(schemas, resolution) -> dict[str, str]:

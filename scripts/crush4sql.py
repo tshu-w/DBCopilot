@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Literal
 
 import guidance
+import nltk
 import numpy as np
 from lightning.fabric.utilities.seed import seed_everything
 from ranx import Qrels, Run, evaluate
@@ -18,6 +19,8 @@ from rich.console import Console
 from rich.table import Table
 from tenacity import retry, stop_after_attempt, wait_exponential
 from tqdm.asyncio import tqdm, tqdm_asyncio
+
+nltk.download = lambda *args, **kwargs: None
 
 HALLUCINATED_PROMPT = """Hallucinate the minimal schema of a relational database that can be used to answer the natural language question. Here are some examples:
 
