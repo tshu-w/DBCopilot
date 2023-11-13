@@ -411,6 +411,37 @@ def retrieve_schemas(
     db_scores = evaluate(Qrels(db_qrels), Run(db_results), metrics=DB_METRICS)
     tbl_scores = evaluate(Qrels(tbl_qrels), Run(tbl_results), metrics=TBL_METRICS)
 
+    for qid, it in enumerate(test):
+        if db_results[str(qid)]:
+            dbs, _scores = zip(
+                *sorted(db_results[str(qid)].items(), key=lambda x: x[1], reverse=True)[
+                    :5
+                ]
+            )
+            test[qid]["pred_schemas"] = [
+                {
+                    "database": db,
+                    "tables": [
+                        tbl.split(".")[1]
+                        for tbl in tbl_results[str(qid)]
+                        if tbl.split(".")[0] == db
+                    ],
+                }
+                for db in dbs
+            ]
+        else:
+            test[qid]["pred_schemas"] = []
+
+    retriever_type = "sparse" if retriever_class == SparseRetriever else "dense"
+    result_path = (
+        Path("results")
+        / "retrieval"
+        / f"crush4sql_{test_name}_{retriever_type}_{str(tune).lower()}.json"
+    )
+    result_path.parent.mkdir(parents=True, exist_ok=True)
+    with result_path.open("w") as f:
+        json.dump(test, f, indent=2)
+
     return [*db_scores.values(), *tbl_scores.values()]
 
 
