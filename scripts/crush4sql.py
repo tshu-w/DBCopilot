@@ -201,7 +201,7 @@ def get_retriever(
     retriever_class: SparseRetriever | DenseRetriever = SparseRetriever,
     retriever_kwargs: dict | None = None,
     tune: bool = False,
-    force: bool = True,
+    force: bool = False,
 ) -> SparseRetriever | DenseRetriever:
     try:
         if force:
