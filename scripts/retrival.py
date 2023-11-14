@@ -141,11 +141,13 @@ def retrieve_schemas(
 
     db_results = {}
     for q_id, doc_scores in tbl_results.items():
-        scores = Counter()
+        scores, count = Counter(), Counter()
         for doc_id, doc_score in doc_scores.items():
             db = doc_id.split(".")[0]
             scores[db] += doc_score
-        db_results[str(q_id)] = dict(scores)
+            count[db] += 1
+        db_average_scores = {db: scores[db] / count[db] for db in scores}
+        db_results[str(q_id)] = db_average_scores
 
     db_qrels = generate_qrels(test, resolution="database")
     tbl_qrels = generate_qrels(test, resolution="table")
