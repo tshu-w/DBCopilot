@@ -1,4 +1,4 @@
-description: tianshu2020_DBCopilot
+description: DBCopilot
 
 environment:
   image: docker.cipsup.cn/wangtianshu/base
@@ -20,5 +20,5 @@ bind_mounts:
 
 resources:
   slots: 1
-  resource_pool: A100-80G
+  resource_pool: A100-40G
   shm_size: 16G
