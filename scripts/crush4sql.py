@@ -3,6 +3,7 @@ import itertools
 import json
 import math
 import re
+import sys
 from collections import Counter, defaultdict
 from multiprocessing import Pool
 from operator import itemgetter
@@ -19,6 +20,10 @@ from rich.console import Console
 from rich.table import Table
 from tenacity import retry, stop_after_attempt, wait_exponential
 from tqdm.asyncio import tqdm, tqdm_asyncio
+
+sys.path.append(str(Path(__file__).parents[1]))
+
+from src.utils import openai_with_usage  # noqa: F401
 
 nltk.download = lambda *args, **kwargs: None
 
@@ -376,11 +381,14 @@ def retrieve_schemas(
     with test_path.open() as f:
         test = json.load(f)
 
+    model = guidance.llms.OpenAI("gpt-3.5-turbo-instruct")
     segments = asyncio.run(
         gather_with_concurrency(
-            16, *[get_hallucinated_segments(it["question"]) for it in test]
+            16, *[get_hallucinated_segments(it["question"], model) for it in test]
         )
     )
+    print(model.usage)
+    print(model.get_usage_cost_usd())
 
     seg_queries = [
         {"id": f"{qid}.{sid}", "text": f"{test[qid]['question']} {segment}"}
@@ -461,7 +469,7 @@ if __name__ == "__main__":
     ]
     tunes = [
         False,
-        True,
+        # True,
     ]
     default_model = "./models/all-mpnet-base-v2"
     tuned_model = {
