@@ -74,7 +74,7 @@ def get_retriever(
     retriever_class: SparseRetriever | DenseRetriever = SparseRetriever,
     retriever_kwargs: dict | None = None,
     tune: bool = False,
-    force: bool = False,
+    force: bool = True,
 ) -> SparseRetriever | DenseRetriever:
     try:
         if force:
@@ -89,6 +89,7 @@ def get_retriever(
             generate_collection(schemas.items(), resolution),
             show_progress=True,
             callback=lambda x: x,
+            use_gpu=True,
         )
         if hasattr(retriever, "relative_doc_lens") and not isinstance(
             retriever.relative_doc_lens, np.ndarray
@@ -137,7 +138,9 @@ def retrieve_schemas(
         test = json.load(f)
 
     queries = [{"id": str(i), "text": it["question"]} for i, it in enumerate(test)]
-    tbl_results = retriever.bsearch(queries, show_progress=True, cutoff=100)
+    tbl_results = retriever.bsearch(
+        queries, show_progress=True, cutoff=100, batch_size=64
+    )
 
     db_results = {}
     for q_id, doc_scores in tbl_results.items():
