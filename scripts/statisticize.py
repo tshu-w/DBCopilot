@@ -32,10 +32,12 @@ if __name__ == "__main__":
         with Path(f"data/{dataset}/schemas.json").open() as f:
             schemas = json.load(f)
         res["# DB"] = len(schemas)
-        res["# tables/DB"] = sum(len(v) for v in schemas.values()) / len(schemas)
-        res["# cols/table"] = sum(
-            len(t["columns"]) for v in schemas.values() for t in v
-        ) / sum(len(v) for v in schemas.values())
+        # res["# tables/DB"] = sum(len(v) for v in schemas.values()) / len(schemas)
+        # res["# cols/table"] = sum(
+        #     len(t["columns"]) for v in schemas.values() for t in v
+        # ) / sum(len(v) for v in schemas.values())
+        res["# tables"] = sum(len(v) for v in schemas.values())
+        res["# cols"] = sum(len(t["columns"]) for v in schemas.values() for t in v)
         table.add_row(dataset, *map(str, res.values()))
 
     console.print(table)
