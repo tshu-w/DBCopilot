@@ -1,12 +1,11 @@
 <div align="center">
 
 <h2 id="your-project-name">DBCᴏᴘɪʟᴏᴛ: Scaling Natural Language Querying to Massive Databases</h2>
-<!--
+
 <p>
-<a href="https://arxiv.org/abs/1706.03762"><img src="http://img.shields.io/badge/arxiv-1706.03762-B31B1B.svg" alt="Arxiv" /></a>
-<a href="https://proceedings.neurips.cc/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf"><img src="http://img.shields.io/badge/NeurIPS-2017-4b44ce.svg" alt="Conference" /></a>
+<a href="https://arxiv.org/abs/2312.03463"><img src="http://img.shields.io/badge/arxiv-2312.03463-B31B1B.svg" alt="Arxiv" /></a>
 </p>
-//-->
+
 </div>
 
 ## Description
@@ -64,10 +63,15 @@ You can also train and evaluate a single model with the `run` script.
 
 ## Citation
 ```
-@article{YourName,
-  title={Your Title},
-  author={Your team},
-  journal={Location},
-  year={Year}
+@article{wang2023dbcopilot,
+  author       = {Tianshu Wang and Hongyu Lin and Xianpei Han and Le Sun and Xiaoyang Chen and Hao Wang and Zhenyu Zeng},
+  title        = {DBCopilot: Scaling Natural Language Querying to Massive Databases},
+  journal      = {CoRR},
+  year         = 2023,
+  volume       = {abs/2312.03463},
+  doi          = {10.48550/arXiv.2312.03463},
+  eprint       = {2312.03463},
+  eprinttype   = {arXiv},
+  url          = {https://doi.org/10.48550/arXiv.2312.03463},
 }
 ```
