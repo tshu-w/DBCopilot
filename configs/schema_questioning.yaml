@@ -9,7 +9,7 @@ trainer:
 model:
   class_path: src.models.SchemaQuestioning
   init_args:
-    model_name_or_path: ./models/t5-base
+    model_name_or_path: t5-base
     generator_config:
       max_new_tokens: 128
     max_length: 256
