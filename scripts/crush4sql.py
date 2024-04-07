@@ -134,7 +134,6 @@ async def gather_with_concurrency(n, *coros):
 
 
 # Hide program executor tracebacks
-# https://github.com/guidance-ai/guidance/issues/412
 async def program_executor_run(self, llm_session):
     """Execute the program."""
     self.llm_session = llm_session

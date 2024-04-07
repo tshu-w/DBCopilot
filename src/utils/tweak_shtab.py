@@ -1,5 +1,4 @@
 # HACK for shtab
-# https://github.com/iterative/shtab/issues/65
 
 import shtab
 from jsonargparse import ActionConfigFile

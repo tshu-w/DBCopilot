@@ -133,7 +133,6 @@ def deserialize_schema(s: str, separator: dict) -> dict:
     Output: {"database": "<database_name>", "tables": ["<table_name_1>", "<table_name_2>", "<table_name_3>"]}
     """
     # Remove space after separator for T5,
-    # see https://github.com/huggingface/transformers/issues/24743
     s = s.replace(f"{separator} ", f"{separator}")
 
     database, *tables = s.split(f"{separator}")
@@ -203,7 +202,6 @@ def label2schema(s: str, separator: str, tbl2db: dict) -> dict:
     """
     try:
         # Remove space after separator for T5,
-        # see https://github.com/huggingface/transformers/issues/24743
         s = s.replace(f"{separator} ", f"{separator}")
 
         tables = s.split(f"{separator}")
