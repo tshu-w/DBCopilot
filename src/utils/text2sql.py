@@ -1,178 +1,128 @@
-import asyncio
 import re
 
-import guidance
+from diskcache import Cache
+from jinja2 import Template
+from openai import OpenAI
 from tenacity import retry, stop_after_attempt, wait_exponential
-from tqdm.asyncio import tqdm_asyncio
+from tqdm.contrib.concurrent import thread_map
 
-from . import openai_with_usage  # noqa: F401
+cache = Cache("results/diskcache/text2sql_ict")
 
-SINGLE_DB_PROMPT = """
-{{#system~}}
-{{llm.default_system_prompt}}
-{{~/system}}
-
-{{#user~}}
+SINGLE_DB_TPL = Template(
+    """
 ### Complete sqlite SQL query only and with no explanation
 ### Sqlite SQL tables, with their properties:
 #
-# {{#each tables}}{{this.name}}({{#each this.columns}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}})
-# {{/each}}
-### {{question}}
+# {% for db in databases %}{% for table in db.tables %}{{ table.name }}({% for column in table.columns %}"{{ column }}"{% if not loop.last %}, {% endif %}{% endfor %})
+# {% endfor %}{% if not loop.last %}
+# {% endif %}{% endfor %}
+### {{ question }}
 SELECT
-{{~/user}}
-
-{{#assistant~}}
-{{gen "query" temperature=0 stop=";"}}
-{{~/assistant}}
 """
+)
 
-MULTI_DB_PROMPT = """
-{{#system~}}
-{{llm.default_system_prompt}}
-{{~/system}}
-
-{{#user~}}
+MULTI_DB_TPL = Template(
+    """
 ### Complete sqlite SQL query only and with no explanation
 ### Sqlite SQL databases, with their tables and properties:
 #
-# {{#each databases}}{{this.name}}
-# {{#each this.tables}}{{this.name}}({{#each this.columns}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}})
-# {{/each}} {{#unless @last}}\n# {{/unless}}{{/each}}
-### {{question}}
+# {% for db in databases %}{{ db.name }}
+# {% for table in db.tables %}{{ table.name }}({% for column in table.columns %}"{{ column }}"{% if not loop.last %}, {% endif %}{% endfor %})
+# {% endfor %}{% if not loop.last %}
+# {% endif %}{% endfor %}
+### {{ question }}
 SELECT
-{{~/user}}
-
-{{#assistant~}}
-{{gen "query" temperature=0 stop=";"}}
-{{~/assistant}}
 """
+)
 
-COT_PROMPT = """
-{{#system~}}
-{{llm.default_system_prompt}}
-{{~/system}}
-
-{{#user~}}
+COT_TPL = Template(
+    """
 Based on the provided natural language question, find the database that can best answer this question from the list schemas below. Only output the corresponding database schema number in the [id] format, without any additional information.
 
-Question: {{question}}
+Question: {{ question }}
 
 Sqlite SQL databases, with their tables and properties:
 
-{{#each databases}}[{{@index}}] {{this.name}}
-{{#each this.tables}}{{this.name}}({{#each this.columns}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}})
-{{/each}}{{#unless @last}}\n{{/unless}}{{/each}}
-{{~/user}}
+{% for database in databases %}[{{ loop.index0 }}] {{ database.name }}
+{% for table in database.tables %}{{ table.name }}({% for column in table.columns %}"{{ column }}"{% if not loop.last %}, {% endif %}{% endfor %})
+{% endfor %}{% if not loop.last %}
 
-{{#assistant~}}
-{{gen "best" temperature=0}}
-{{~/assistant}}
-
-{{#user~}}
-### Complete sqlite SQL query only and with no explanation for the most relevant schema.
-#
-# {{#each (select_database best databases)}}{{this.name}}({{#each this.columns}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}})
-# {{/each}}
-### {{question}}
-SELECT
-{{~/user}}
-
-{{#assistant~}}
-{{gen "query" temperature=0 stop=";"}}
-{{~/assistant}}
+{% endif %}{% endfor %}
 """
+)
 
 
-def select_database(best, databases):
-    idx = re.search(r"([\d+])", best)
-    if idx:
-        idx = int(idx.group(1))
-        idx = max(idx, 0)
-        idx = min(idx, len(databases) - 1)
-    else:
-        idx = 0
-    return databases[idx]["tables"]
-
-
+@cache.memoize(name="chat_complete")
 @retry(stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, max=10))
-async def text2sql(
-    question: str,
-    schemas: list[dict],
-    model: guidance.llms.LLM,
+def chat_complete(
+    messages,
+    model,
+    client=OpenAI(),
+    **kwargs,
+):
+    response = client.chat.completions.create(messages=messages, model=model, **kwargs)
+    return response
+
+
+def text2sql(
+    instance: dict,
+    model: str = "gpt-3.5-turbo",
     chain_of_thought: bool = False,
 ) -> str:
-    assert model.chat_mode
-    if len(schemas) == 1:
-        tables = schemas[0]["tables"]
-        program = guidance(SINGLE_DB_PROMPT, llm=model, async_mode=True, silent=True)
-        response = await program(question=question, tables=tables)
-    else:
-        if chain_of_thought:
-            program = guidance(COT_PROMPT, llm=model, async_mode=True, silent=True)
-            response = await program(
-                question=question,
-                databases=schemas,
-                select_database=select_database,
-            )
-        else:
-            program = guidance(MULTI_DB_PROMPT, llm=model, async_mode=True, silent=True)
-            response = await program(question=question, databases=schemas)
-
-    joined_query = " ".join(map(str.strip, response["query"].split("\n")))
-    sql = f"SELECT {joined_query}"
-
+    question = instance["question"]
+    schemas = instance["schemas"]
+    examples = instance["examples"]
     if chain_of_thought:
-        idx = re.search(r"([\d+])", response["best"])
+        messages = [
+            {
+                "role": "user",
+                "content": COT_TPL.render(
+                    question=question,
+                    databases=schemas,
+                ),
+            }
+        ]
+        response = chat_complete(
+            messages=messages, model=model, seed=42, temperature=0.0, max_tokens=1000
+        )
+        content = response.choices[0].message.content
+        idx = re.search(r"\[(\d+)\]", content)
         if idx:
             idx = int(idx.group(1))
+            idx = max(idx, 0)
+            idx = min(idx, len(schemas) - 1)
         else:
             idx = 0
-        return sql, idx
-    return sql
 
+        schemas = schemas[idx : idx + 1]
 
-async def gather_with_concurrency(n, *coros):
-    semaphore = asyncio.Semaphore(n)
+    messages = []
+    for exp in examples or []:
+        tpl = SINGLE_DB_TPL if len(schemas) == 1 else MULTI_DB_TPL
+        prompt = tpl.render(question=exp["question"], databases=exp["schemas"])
+        messages.append({"role": "user", "content": prompt})
+        messages.append(
+            {"role": "assistant", "content": exp["sql"].removeprefix("SELECT")}
+        )
 
-    async def sem_coro(coro):
-        async with semaphore:
-            return await coro
-
-    return await tqdm_asyncio.gather(*(sem_coro(c) for c in coros))
-
-
-# Hide program executor tracebacks
-# https://github.com/guidance-ai/guidance/issues/412
-async def program_executor_run(self, llm_session):
-    """Execute the program."""
-    self.llm_session = llm_session
-    # first parse all the whitespace control
-    # self.whitespace_control_visit(self.parse_tree)
-
-    # now execute the program
-    self.program._variables["@raw_prefix"] = ""
-    await self.visit(
-        self.parse_tree,
-        guidance._variable_stack.VariableStack([self.program._variables], self),
+    tpl = SINGLE_DB_TPL if len(schemas) == 1 else MULTI_DB_TPL
+    prompt = tpl.render(question=question, databases=schemas)
+    messages.append({"role": "user", "content": prompt})
+    response = chat_complete(
+        messages=messages, model=model, seed=42, temperature=0.0, max_tokens=1000
     )
+    content = response.choices[0].message.content
+    joined = " ".join(map(str.strip, content.split("\n")))
+    sql = f"SELECT {joined}"
 
-
-guidance._program_executor.ProgramExecutor.run = program_executor_run
+    return sql
 
 
 # fmt: off
 if __name__ == "__main__":
-    model = guidance.llms.OpenAI("gpt-3.5-turbo", caching=False)
+    model = "gpt-3.5-turbo"
     question="Return the names of the contestants whose names contain the substring 'Al'."
     schemas=[
-        {
-            "name": "singer",
-            "tables": [
-                {"name": "singer", "columns": ["singer_id", "name", "birth_year", "net_worth_millions", "citizenship"]},
-                {"name": "song", "columns": ["song_id", "title", "singer_id", "sales", "highest position"]},
-            ]
-        },
         {
             "name": "singer",
             "tables": [
@@ -188,30 +138,18 @@ if __name__ == "__main__":
                 {"name": "votes", "columns": ["vote_id", "phone_number", "state", "contestant_number", "created"]},
             ]
         },
-        {
-            "name": "singer",
-            "tables": [
-                {"name": "singer", "columns": ["singer_id", "name", "birth_year", "net_worth_millions", "citizenship"]},
-                {"name": "song", "columns": ["song_id", "title", "singer_id", "sales", "highest position"]},
-            ]
-        },
-        {
-            "name": "singer",
-            "tables": [
-                {"name": "singer", "columns": ["singer_id", "name", "birth_year", "net_worth_millions", "citizenship"]},
-                {"name": "song", "columns": ["song_id", "title", "singer_id", "sales", "highest position"]},
-            ]
-        },
     ]
 
-    sqls = asyncio.run(
-        gather_with_concurrency(
-            3,
-            *[
-                text2sql(question=question, schemas=schemas, model=model, chain_of_thought=_)
-                for _ in range(2)
-            ]
-        )
+    instances = [
+        {
+            "question": question,
+            "schemas": schemas,
+        } for _ in range(2)
+    ]
+    sqls = thread_map(
+        text2sql,
+        instances,
+        [model] * 2,
+        [False, True],
     )
     print(sqls)
-    print(model.usage)
