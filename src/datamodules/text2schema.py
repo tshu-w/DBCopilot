@@ -69,7 +69,7 @@ class Text2Schema(pl.LightningDataModule):
                     for table in tables:
                         self.tbl2db[table["name"]].append(database)
 
-            self.test_splits = [x for x in self.datasets.keys() if "test" in x]
+            self.test_splits = [x for x in self.datasets if "test" in x]
 
             self.collate_fn = getattr(self.trainer.model, "collate_fn", None)
             self.collate_fn.G = self.G

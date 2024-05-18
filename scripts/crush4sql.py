@@ -86,6 +86,7 @@ Tables: {{~gen "tables" temperature=0 max_tokens=500 top_p=1 frequency_penalty=0
 DB_METRICS = ["recall@1", "recall@5"]
 TBL_METRICS = ["recall@5", "recall@10", "recall@15", "recall@20"]
 METRICS = ["DR@1", "DR@5", "TR@5", "TR@10", "TR@15", "TR@20"]
+DEFAULT_LLM = guidance.llms.OpenAI("gpt-3.5-turbo-instruct")
 
 
 def extract_items(segment):
@@ -104,12 +105,12 @@ def extract_items(segment):
 @retry(stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, max=10))
 async def get_hallucinated_segments(
     question: str,
-    model: guidance.llms.LLM = guidance.llms.OpenAI("gpt-3.5-turbo-instruct"),
+    model: guidance.llms.LLM = DEFAULT_LLM,
 ):
     program = guidance(HALLUCINATED_PROMPT, llm=model, async_mode=True, silent=True)
     response = await program(question=question)
     try:
-        segments = [l for l in response["tables"].splitlines() if l != ""]
+        segments = [line for line in response["tables"].splitlines() if line != ""]
         segments = [segment.split(":")[1].strip() for segment in segments]
         segments = [segment.replace("/", " ").replace("-", " ") for segment in segments]
         segments = [
@@ -278,7 +279,7 @@ def greedy_select(segments, docs, BUDGET):
             return 0
         entropy = get_entropy(segment, cos)
 
-        if APPLY_MEAN_ENTROPY:
+        if APPLY_MEAN_ENTROPY:  # noqa: SIM108
             inv_entropy = mean_entropy - entropy
         else:
             inv_entropy = -entropy
@@ -352,7 +353,7 @@ def process_seg_results(args):
             scored_docs[doc][segment] = score
 
     for segment in qsegments:
-        for k, v in scored_docs.items():
+        for k, _ in scored_docs.items():
             if segment not in scored_docs[k]:
                 scored_docs[k][segment] = 0
 
@@ -425,9 +426,10 @@ def retrieve_schemas(
             dbs, _scores = zip(
                 *sorted(db_results[str(qid)].items(), key=lambda x: x[1], reverse=True)[
                     :5
-                ]
+                ],
+                strict=True,
             )
-            test[qid]["pred_schemas"] = [
+            it["pred_schemas"] = [
                 {
                     "database": db,
                     "tables": [
@@ -439,7 +441,7 @@ def retrieve_schemas(
                 for db in dbs
             ]
         else:
-            test[qid]["pred_schemas"] = []
+            it["pred_schemas"] = []
 
     retriever_type = "sparse" if retriever_class == SparseRetriever else "dense"
     result_path = (

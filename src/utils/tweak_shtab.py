@@ -199,9 +199,7 @@ def complete_zsh(parser, root_prefix=None, preamble="", choice_functions=None):
 {prefix}_options=(
   {arguments}
 )
-""".format(
-            prefix=prefix, arguments="\n  ".join(options["arguments"])
-        )
+""".format(prefix=prefix, arguments="\n  ".join(options["arguments"]))
 
     def command_list(prefix, options):
         name = " ".join([prog, *options["paths"]])

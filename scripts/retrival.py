@@ -163,9 +163,10 @@ def retrieve_schemas(
             dbs, _scores = zip(
                 *sorted(db_results[str(qid)].items(), key=lambda x: x[1], reverse=True)[
                     :5
-                ]
+                ],
+                strict=True,
             )
-            test[qid]["pred_schemas"] = [
+            it["pred_schemas"] = [
                 {
                     "database": db,
                     "tables": [
@@ -177,7 +178,7 @@ def retrieve_schemas(
                 for db in dbs
             ]
         else:
-            test[qid]["pred_schemas"] = []
+            it["pred_schemas"] = []
 
     retriever_type = "sparse" if retriever_class == SparseRetriever else "dense"
     result_path = (

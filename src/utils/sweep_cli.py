@@ -64,19 +64,23 @@ def sweep(
     debug: bool = False,
     gpus_per_trial: int | float = 1,
     *,
-    ckpt_paths: list[str | None] = [None],
-    configs: list[str] = [],
-    data_configs: list[str | None] = [],
-    override_kwargs: dict[str, Any] = {},
+    ckpt_paths: list[str | None] | None = None,
+    configs: list[str] | None = None,
+    data_configs: list[str | None] | None = None,
+    override_kwargs: dict[str, Any] | None = None,
 ):
     param_space = {
-        "ckpt_path": tune.grid_search(ckpt_paths),
+        **({"ckpt_path": tune.grid_search(ckpt_paths)} if ckpt_paths else {}),
         **({"config": tune.grid_search(configs)} if configs else {}),
         **({"data_config": tune.grid_search(data_configs)} if data_configs else {}),
-        **{
-            k: tune.grid_search(v) if isinstance(v, list) else tune.grid_search([v])
-            for k, v in override_kwargs.items()
-        },
+        **(
+            {
+                k: tune.grid_search(v) if isinstance(v, list) else tune.grid_search([v])
+                for k, v in override_kwargs.items()
+            }
+            if override_kwargs
+            else {}
+        ),
     }
 
     tune_config = tune.TuneConfig()
@@ -100,15 +104,15 @@ def sweep(
 
 
 def fit(*args, **kwargs):
-    sweep(command="fit", *args, **kwargs)
+    sweep("fit", *args, **kwargs)
 
 
 def validate(*args, **kwargs):
-    sweep(command="validate", *args, **kwargs)
+    sweep("validate", *args, **kwargs)
 
 
 def test(*args, **kwargs):
-    sweep(command="test", *args, **kwargs)
+    sweep("test", *args, **kwargs)
 
 
 def sweep_cli():

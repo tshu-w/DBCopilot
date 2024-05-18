@@ -221,7 +221,7 @@ def evaluate_text2sql(
             }
             for it in dev
         ]
-        cot = True if resolution.endswith("cot") else False
+        cot = bool(resolution.endswith("cot"))
         preds = thread_map(
             lambda it: text2sql(it, model=model_name, chain_of_thought=cot),
             instances,

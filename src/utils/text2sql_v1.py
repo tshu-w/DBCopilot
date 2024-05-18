@@ -124,10 +124,7 @@ async def text2sql(
 
     if chain_of_thought:
         idx = re.search(r"([\d+])", response["best"])
-        if idx:
-            idx = int(idx.group(1))
-        else:
-            idx = 0
+        idx = int(idx.group(1)) if idx else 0
         return sql, idx
     return sql
 

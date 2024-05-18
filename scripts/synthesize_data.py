@@ -94,7 +94,7 @@ def synthesize_data(
     trainer = Trainer(logger=False, devices=1)
     preditions = trainer.predict(model, dataloader)
     preditions = [t for lst in preditions for t in lst]
-    for question, generated in zip(preditions, synthetic_data):
+    for question, generated in zip(preditions, synthetic_data, strict=True):
         generated["question"] = question
 
     with Path(f"./data/{dataset}/synthetic.json").open("w") as f:
@@ -117,6 +117,6 @@ if __name__ == "__main__":
     ]
 
     for dataset, ckpt_path, n_walks in zip(
-        datasets, ckpt_paths * len(datasets), n_walks_lst
+        datasets, ckpt_paths * len(datasets), n_walks_lst, strict=True
     ):
         synthesize_data(dataset, ckpt_path, n_walks=n_walks)

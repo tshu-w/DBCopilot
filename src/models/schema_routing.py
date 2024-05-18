@@ -28,10 +28,7 @@ class SchemaRouting(pl.LightningModule):
     def __init__(
         self,
         model_name_or_path: str,
-        generator_config: dict = {
-            "max_new_tokens": 512,
-            "constraint_decoding": True,
-        },
+        generator_config: dict | None = None,
         relational: bool = True,
         sep_token: str = "<sep>",
         max_length: int | None = 512,
@@ -47,7 +44,10 @@ class SchemaRouting(pl.LightningModule):
             model_name_or_path, verbose=False
         )
         self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name_or_path)
-        self.generator_config = generator_config
+        self.generator_config = generator_config or {
+            "max_new_tokens": 512,
+            "constraint_decoding": True,
+        }
 
         if self.tokenizer.sep_token is None:
             self.tokenizer.add_special_tokens({"sep_token": sep_token})
@@ -97,9 +97,9 @@ class SchemaRouting(pl.LightningModule):
             partial_prefix_allowed_tokens_fn = partial(
                 prefix_allowed_tokens_fn, constraint_decoder=constraint_decoder
             )
-            self.generator_config[
-                "prefix_allowed_tokens_fn"
-            ] = partial_prefix_allowed_tokens_fn
+            self.generator_config["prefix_allowed_tokens_fn"] = (
+                partial_prefix_allowed_tokens_fn
+            )
 
     def forward(self, **inputs):
         return self.model(**inputs)

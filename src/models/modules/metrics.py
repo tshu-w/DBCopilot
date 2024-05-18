@@ -18,7 +18,7 @@ class Classification(Metric):
         self.top_k = top_k
 
     def update(self, preds: list[list[str]], target: list[list[str]]):
-        for pred, tgt in zip(preds, target):
+        for pred, tgt in zip(preds, target, strict=True):
             if self.top_k is not None:
                 pred = pred[: self.top_k]
             pred = set(pred)

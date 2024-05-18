@@ -42,9 +42,9 @@ class Text2SchemaCollator:
             return_tensors="pt",
         )
 
-        features["labels"][
-            features["labels"] == self.tokenizer.pad_token_id
-        ] = self.label_pad_token_id
+        features["labels"][features["labels"] == self.tokenizer.pad_token_id] = (
+            self.label_pad_token_id
+        )
         return features
 
 
@@ -81,7 +81,7 @@ class Schema2TextCollator:
         elif self.model_mode == "causal":
             targets = [
                 f"{s}{t}{self.tokenizer.eos_token}" if t else f"{s}"
-                for s, t in zip(inputs, targets)
+                for s, t in zip(inputs, targets, strict=True)
             ]
             features = self.tokenizer(
                 text=inputs,
@@ -97,12 +97,12 @@ class Schema2TextCollator:
                 max_length=self.max_length,
                 return_length=True,
             )["length"]
-            for label, source_len in zip(features["labels"], source_lens):
+            for label, source_len in zip(features["labels"], source_lens, strict=True):
                 label[:source_len] = torch.tensor([-100] * source_len)
 
-        features["labels"][
-            features["labels"] == self.tokenizer.pad_token_id
-        ] = self.label_pad_token_id
+        features["labels"][features["labels"] == self.tokenizer.pad_token_id] = (
+            self.label_pad_token_id
+        )
         return features
 
 

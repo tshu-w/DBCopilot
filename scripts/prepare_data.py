@@ -111,19 +111,18 @@ def get_dataset_schemas(dataset) -> dict:
 
                     # Patch: for missing foreign keys
                     for k in primary_keys:
-                        if "foreign_key" not in column:
-                            if (
-                                j != k
-                                and db["column_names_original"][k][1] != "id"
-                                and db["column_names_original"][k][1]
-                                == db["column_names_original"][j][1]
-                            ):
-                                column["foreign_key"] = {
-                                    "table": db["table_names_original"][
-                                        db["column_names_original"][k][0]
-                                    ],
-                                    "column": db["column_names_original"][k][1],
-                                }
+                        if "foreign_key" not in column and (
+                            j != k
+                            and db["column_names_original"][k][1] != "id"
+                            and db["column_names_original"][k][1]
+                            == db["column_names_original"][j][1]
+                        ):
+                            column["foreign_key"] = {
+                                "table": db["table_names_original"][
+                                    db["column_names_original"][k][0]
+                                ],
+                                "column": db["column_names_original"][k][1],
+                            }
 
                     table["columns"].append(column)
 

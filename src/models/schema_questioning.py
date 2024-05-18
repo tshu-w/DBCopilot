@@ -17,9 +17,7 @@ class SchemaQuestioning(pl.LightningModule):
         self,
         model_name_or_path: str,
         peft_config: dict | None = None,
-        generator_config: dict = {
-            "max_new_tokens": 512,
-        },
+        generator_config: dict | None = None,
         max_length: int | None = 512,
         weight_decay: float = 0.0,
         learning_rate: float = 1e-4,
@@ -41,7 +39,7 @@ class SchemaQuestioning(pl.LightningModule):
             peft_config = get_peft_config(peft_config)
             self.model = get_peft_model(self.model, peft_config)
             self.model.print_trainable_parameters()
-        self.generator_config = generator_config
+        self.generator_config = generator_config or {"max_new_tokens": 512}
 
         if self.tokenizer.pad_token_id is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
@@ -83,7 +81,10 @@ class SchemaQuestioning(pl.LightningModule):
     def predict_step(self, batch, batch_idx: int, dataloader_idx: int = 0):
         outputs = self.model.generate(**batch, **self.hparams.generator_config)
         if self.mode == "causal":
-            outputs = [opt[len(ipt) :] for ipt, opt in zip(batch["input_ids"], outputs)]
+            outputs = [
+                opt[len(ipt) :]
+                for ipt, opt in zip(batch["input_ids"], outputs, strict=True)
+            ]
 
         pred_texts = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
 

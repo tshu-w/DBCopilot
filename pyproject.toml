@@ -17,11 +17,18 @@ useLibraryCodeForTypes = true
 
 # https://github.com/charliermarsh/ruff
 [tool.ruff]
-select = ["E", "F", "I", "UP"]
 fix = true
-ignore = ["E501", "E402", "E741"]
 target-version = "py310"
-
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle
+    "F",   # Pyflakes
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+    "I",   # isort
+]
+ignore = ["E501"]
 # https://github.com/timothycrosley/isort/
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 combine-as-imports = true

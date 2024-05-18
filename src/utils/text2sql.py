@@ -51,13 +51,15 @@ Sqlite SQL databases, with their tables and properties:
 """
 )
 
+DEFAULT_CLIENT = OpenAI()
+
 
 @cache.memoize(name="chat_complete")
 @retry(stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, max=10))
 def chat_complete(
     messages,
     model,
-    client=OpenAI(),
+    client=DEFAULT_CLIENT,
     **kwargs,
 ):
     response = client.chat.completions.create(messages=messages, model=model, **kwargs)

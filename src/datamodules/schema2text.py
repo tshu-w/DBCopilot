@@ -51,7 +51,7 @@ class Schema2Text(pl.LightningDataModule):
                 self.datasets["train"] = datasets_split["train"]
                 self.datasets["validation"] = datasets_split["test"]
 
-            self.test_splits = [x for x in self.datasets.keys() if "test" in x]
+            self.test_splits = [x for x in self.datasets if "test" in x]
 
             self.collate_fn = getattr(self.trainer.model, "collate_fn", None)
 
