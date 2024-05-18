@@ -6,6 +6,9 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
 
 
+# TODO:
+# https://github.com/Lightning-AI/lightning/issues/14188
+# https://github.com/Lightning-AI/lightning/pull/14640
 @property
 def log_dir(self) -> str:
     if self.loggers and self.loggers[0].log_dir is not None:

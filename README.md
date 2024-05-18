@@ -1,17 +1,24 @@
 <div align="center">
 
 <h2 id="your-project-name">DBCᴏᴘɪʟᴏᴛ: Scaling Natural Language Querying to Massive Databases</h2>
+
+<p>
+<a href="https://arxiv.org/abs/2312.03463"><img src="http://img.shields.io/badge/arxiv-2312.03463-B31B1B.svg" alt="Arxiv" /></a>
+</p>
+
 </div>
 
 ## Description
 
-NL2SQL simplifies database interactions by enabling non-experts to convert natural language (NL) questions into Structured Query Language (SQL) queries. While recent advances in large language models (LLMs) have improved the zero/few-shot NL2SQL paradigm, existing methods face scalability challenges when dealing with massive databases. This paper introduces DBCopilot, a framework that addresses these challenges by employing a compact and flexible copilot model for routing over massive databases. Specifically, DBCopilot decouples schema-agnostic NL2SQL into domain-specific schema routing and generic SQL generation. This framework utilizes a lightweight differentiable search index to construct semantic mappings for massive database schemas and navigates natural language questions to their target databases and tables in a relation-aware, end-to-end manner. The routed schemas and questions are then fed into LLMs for effective SQL generation. Furthermore, DBCopilot introduces a reverse schema-to-question generation paradigm that can automatically learn and adapt the router over massive databases without manual intervention. Experimental results demonstrate that DBCopilot is a scalable and effective solution for schema-agnostic NL2SQL, providing a significant advance in handling large-scale schemas of real-world scenarios.
+![DBCopilot](https://github.com/tshu-w/DBCopilot/assets/13161779/8212f2ae-f12f-481a-b8ba-b1de9d8bbef9)
+
+Text-to-SQL simplifies database interactions by enabling non-experts to convert their natural language (NL) questions into Structured Query Language (SQL) queries. While recent advances in large language models (LLMs) have improved the zero-shot text-to-SQL paradigm, existing methods face scalability challenges when dealing with massive, dynamically changing databases. This paper introduces DBCopilot, a framework that addresses these challenges by employing a compact and flexible copilot model for routing across massive databases. Specifically, DBCopilot decouples the text-to-SQL process into schema routing and SQL generation, leveraging a lightweight sequence-to-sequence neural network-based router to formulate database connections and navigate natural language questions through databases and tables. The routed schemas and questions are then fed into LLMs for efficient SQL generation. Furthermore, DBCopilot also introduced a reverse schema-to-question generation paradigm, which can learn and adapt the router over massive databases automatically without requiring manual intervention. Experimental results demonstrate that DBCopilot is a scalable and effective solution for real-world text-to-SQL tasks, providing a significant advancement in handling large-scale schemas.
 
 ## How to run
 First, install dependencies
 ```console
 # clone project
-git clone https://github.com/XXXX/DBCopilot
+git clone https://github.com/tshu-w/DBCopilot
 cd DBCopilot
 
 # [SUGGESTED] use conda environment
@@ -22,7 +29,9 @@ conda activate DBCopilot
 pip install -r requirements.txt
 ```
 
-Then, run the experiments with the following commands:
+Next, download and extract the data from [OneDrive Share Link](https://1drv.ms/u/s!AlCpSo470WIyo-sQPTT1K-mnzpC3fA?e=QISuff).
+
+Finally, run the experiments with the following commands:
 ```console
 # Train the schema questioning models:
 ./scripts/sweep --config configs/sweep_fit_schema_questioning.yaml
@@ -50,4 +59,19 @@ You can also train and evaluate a single model with the `run` script.
 # get the script help
 ./run --help
 ./run fit --help
+```
+
+## Citation
+```
+@article{wang2023dbcopilot,
+  author       = {Tianshu Wang and Hongyu Lin and Xianpei Han and Le Sun and Xiaoyang Chen and Hao Wang and Zhenyu Zeng},
+  title        = {DBCopilot: Scaling Natural Language Querying to Massive Databases},
+  journal      = {CoRR},
+  year         = 2023,
+  volume       = {abs/2312.03463},
+  doi          = {10.48550/arXiv.2312.03463},
+  eprint       = {2312.03463},
+  eprinttype   = {arXiv},
+  url          = {https://doi.org/10.48550/arXiv.2312.03463},
+}
 ```
