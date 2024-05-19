@@ -1,13 +1,10 @@
 import json
 import shutil
-import sys
 from pathlib import Path
 
 import wordninja
 from sqlglot import exp, parse_one
 from tqdm import tqdm
-
-sys.path.append(str(Path(__file__).parents[1]))
 
 RAW_DATA_PATH = Path("./data/raw")
 TGT_PATH = Path("./data/")

@@ -2,7 +2,6 @@ import json
 import random
 import shlex
 import subprocess
-import sys
 import tempfile
 from pathlib import Path
 from typing import Literal
@@ -12,8 +11,6 @@ from lightning.fabric.utilities.seed import seed_everything
 from retriv import SparseRetriever
 from tqdm import tqdm
 from tqdm.contrib.concurrent import thread_map
-
-sys.path.append(str(Path(__file__).parents[1]))
 
 from src.utils.text2sql import text2sql
 

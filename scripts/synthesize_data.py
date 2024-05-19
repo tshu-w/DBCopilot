@@ -1,6 +1,5 @@
 import json
 import random
-import sys
 from collections import Counter, OrderedDict
 from pathlib import Path
 
@@ -9,8 +8,6 @@ from lightning.fabric.utilities.seed import seed_everything
 from lightning.pytorch import Trainer
 from torch.utils.data import DataLoader
 from walker import random_walks
-
-sys.path.append(str(Path(__file__).parents[1]))
 
 from src.models import SchemaQuestioning
 from src.utils.helpers import schema2graph, snode

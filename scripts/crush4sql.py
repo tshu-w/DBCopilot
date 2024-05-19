@@ -3,7 +3,6 @@ import itertools
 import json
 import math
 import re
-import sys
 from collections import Counter, defaultdict
 from multiprocessing import Pool
 from operator import itemgetter
@@ -20,8 +19,6 @@ from rich.console import Console
 from rich.table import Table
 from tenacity import retry, stop_after_attempt, wait_exponential
 from tqdm.asyncio import tqdm, tqdm_asyncio
-
-sys.path.append(str(Path(__file__).parents[1]))
 
 from src.utils import openai_with_usage  # noqa: F401
 
