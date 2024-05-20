@@ -6,7 +6,7 @@ from openai import OpenAI
 from tenacity import retry, stop_after_attempt, wait_exponential
 from tqdm.contrib.concurrent import thread_map
 
-cache = Cache("results/diskcache/text2sql_ict")
+cache = Cache("results/diskcache/text2sql")
 
 SINGLE_DB_TPL = Template(
     """

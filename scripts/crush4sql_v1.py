@@ -1,33 +1,33 @@
+import asyncio
 import itertools
 import json
 import math
 import re
+import sys
 from collections import Counter, defaultdict
 from multiprocessing import Pool
 from operator import itemgetter
 from pathlib import Path
 from typing import Literal
 
+import guidance
 import nltk
 import numpy as np
-from diskcache import Cache
-from jinja2 import Template
 from lightning.fabric.utilities.seed import seed_everything
-from openai import OpenAI
 from ranx import Qrels, Run, evaluate
 from retriv import DenseRetriever, SparseRetriever
 from rich.console import Console
 from rich.table import Table
 from tenacity import retry, stop_after_attempt, wait_exponential
-from tqdm import tqdm
-from tqdm.contrib.concurrent import thread_map
+from tqdm.asyncio import tqdm, tqdm_asyncio
+
+sys.path.append(str(Path(__file__).parents[1]))
+
+from src.utils import openai_with_usage  # noqa: F401
 
 nltk.download = lambda *args, **kwargs: None
 
-cache = Cache("results/diskcache/crush4sql")
-
-HALLUCINATED_PROMPT = Template(
-    """Hallucinate the minimal schema of a relational database that can be used to answer the natural language question. Here are some examples:
+HALLUCINATED_PROMPT = """Hallucinate the minimal schema of a relational database that can be used to answer the natural language question. Here are some examples:
 
 Example 1:
 
@@ -80,13 +80,13 @@ Example 7:
 
 Question: {{question}}
 
-Tables: """
-)
+Tables: {{~gen "tables" temperature=0 max_tokens=500 top_p=1 frequency_penalty=0 presence_penalty=0}}
+"""
 
 DB_METRICS = ["recall@1", "recall@5"]
 TBL_METRICS = ["recall@5", "recall@10", "recall@15", "recall@20"]
 METRICS = ["DR@1", "DR@5", "TR@5", "TR@10", "TR@15", "TR@20"]
-DEFAULT_CLIENT = OpenAI()
+DEFAULT_LLM = guidance.llms.OpenAI("gpt-3.5-turbo-instruct")
 
 
 def extract_items(segment):
@@ -102,36 +102,15 @@ def extract_items(segment):
         return None
 
 
-@cache.memoize(name="complete")
 @retry(stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, max=10))
-def complete(
-    prompt,
-    model,
-    client=DEFAULT_CLIENT,
-    **kwargs,
-):
-    response = client.completions.create(prompt=prompt, model=model, **kwargs)
-    return response
-
-
-def get_hallucinated_segments(
+async def get_hallucinated_segments(
     question: str,
-    model: str = "gpt-3.5-turbo-instruct",
+    model: guidance.llms.LLM = DEFAULT_LLM,
 ):
-    prompt = HALLUCINATED_PROMPT.render(question=question)
-    response = complete(
-        prompt=prompt,
-        model=model,
-        seed=42,
-        temperature=0.0,
-        max_tokens=500,
-        top_p=1.0,
-        frequency_penalty=0.0,
-        presence_penalty=0.0,
-    )
-    text = response.choices[0].text
+    program = guidance(HALLUCINATED_PROMPT, llm=model, async_mode=True, silent=True)
+    response = await program(question=question)
     try:
-        segments = [line for line in text.splitlines() if line != ""]
+        segments = [line for line in response["tables"].splitlines() if line != ""]
         segments = [segment.split(":")[1].strip() for segment in segments]
         segments = [segment.replace("/", " ").replace("-", " ") for segment in segments]
         segments = [
@@ -142,7 +121,36 @@ def get_hallucinated_segments(
         segments = [segment for segment in segments if "." in segment]
         return segments
     except Exception:
-        return [text]
+        return [response["tables"]]
+
+
+async def gather_with_concurrency(n, *coros):
+    semaphore = asyncio.Semaphore(n)
+
+    async def sem_coro(coro):
+        async with semaphore:
+            return await coro
+
+    return await tqdm_asyncio.gather(*(sem_coro(c) for c in coros))
+
+
+# Hide program executor tracebacks
+# https://github.com/guidance-ai/guidance/issues/412
+async def program_executor_run(self, llm_session):
+    """Execute the program."""
+    self.llm_session = llm_session
+    # first parse all the whitespace control
+    # self.whitespace_control_visit(self.parse_tree)
+
+    # now execute the program
+    self.program._variables["@raw_prefix"] = ""
+    await self.visit(
+        self.parse_tree,
+        guidance._variable_stack.VariableStack([self.program._variables], self),
+    )
+
+
+guidance._program_executor.ProgramExecutor.run = program_executor_run
 
 
 def generate_collection(schemas, resolution) -> dict[str, str]:
@@ -374,11 +382,14 @@ def retrieve_schemas(
     with test_path.open() as f:
         test = json.load(f)
 
-    segments = thread_map(
-        get_hallucinated_segments,
-        [it["question"] for it in test],
-        max_workers=16,
+    model = guidance.llms.OpenAI("gpt-3.5-turbo-instruct")
+    segments = asyncio.run(
+        gather_with_concurrency(
+            16, *[get_hallucinated_segments(it["question"], model) for it in test]
+        )
     )
+    print(model.usage)
+    print(model.get_usage_cost_usd())
 
     seg_queries = [
         {"id": f"{qid}.{sid}", "text": f"{test[qid]['question']} {segment}"}
