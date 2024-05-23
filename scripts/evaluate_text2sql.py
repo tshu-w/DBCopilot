@@ -12,6 +12,7 @@ from retriv import SparseRetriever
 from tqdm import tqdm
 from tqdm.contrib.concurrent import thread_map
 
+from src.utils.api_cost import APICostCalculator
 from src.utils.text2sql import text2sql
 
 nltk.download = lambda *args, **kwargs: None
@@ -121,7 +122,7 @@ def prepare_instances(
                 schemas.append({"name": db, "tables": tbls})
             assert len(schemas) == 5
         elif resolution.startswith("prediction"):
-            with routing_file.open() as file:
+            with routing_file.open("r") as file:
                 routing = json.load(file)
 
             schemas = []
@@ -164,7 +165,7 @@ def prepare_instances(
                 )
             assert len(schemas) <= 5
         elif resolution.startswith("baseline"):
-            with routing_file.open() as file:
+            with routing_file.open("r") as file:
                 routing = json.load(file)
 
             schemas = []
@@ -202,7 +203,7 @@ def evaluate_text2sql(
     test: str,
     resolution: str,
     routing_file: Path | None = None,
-    model_name: str = "gpt-3.5-turbo-16k",
+    model_name: str = "gpt-3.5-turbo-0125",
     override: bool = True,
 ):
     seed_everything(42)
@@ -219,11 +220,20 @@ def evaluate_text2sql(
             for it in dev
         ]
         cot = bool(resolution.endswith("cot"))
+
+        api_cost_calculator = APICostCalculator(model_name=model_name)
+        from src.utils import text2sql as text2sql_module
+
+        text2sql_module.chat_complete = api_cost_calculator(
+            text2sql_module.chat_complete
+        )
+
         preds = thread_map(
             lambda it: text2sql(it, model=model_name, chain_of_thought=cot),
             instances,
             max_workers=16,
         )
+        print(f"Cost: ${api_cost_calculator.cost:.2f}")
 
         with pred_file.open("w") as file:
             file.writelines(sql + "\n" for sql in preds)
@@ -256,10 +266,11 @@ def evaluate_text2sql(
 
 if __name__ == "__main__":
     datasets = {
-        "spider": ["spider", "spider_syn", "spider_realistic"],
+        # "spider": ["spider", "spider_syn", "spider_realistic"],
+        "spider": ["spider", "spider_syn"],
         # "spider": ["spider", "spider_syn", "spider_realistic", "spider_dr"],
         "bird": ["bird"],
-        "fiben": ["fiben"],
+        # "fiben": ["fiben"],
     }
     routing_dirs = {
         "spider": Path("./results/test/silver-sun-65/k5ou2ykv"),
