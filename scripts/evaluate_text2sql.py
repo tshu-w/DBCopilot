@@ -121,12 +121,12 @@ def prepare_instances(
                 ]
                 schemas.append({"name": db, "tables": tbls})
             assert len(schemas) == 5
-        elif resolution.startswith("prediction"):
+        elif resolution.startswith("prediction") or resolution.startswith("baseline"):
             with routing_file.open("r") as file:
                 routing = json.load(file)
 
             schemas = []
-            suffix = resolution.split("@")[1]
+            suffix = resolution.split("@")[-1]
             if suffix == "cot":
                 suffix = "5"
 
@@ -144,32 +144,6 @@ def prepare_instances(
                 pred_schemas = routing[idx]["pred_schemas"][: int(suffix)]
             else:
                 pred_schemas = [routing[idx]["pred_schemas"][gold_idx]]
-
-            for pred_schema in pred_schemas:
-                db = pred_schema["database"]
-                tbls = pred_schema["tables"]
-                schemas.append(
-                    {
-                        "name": db,
-                        "tables": [
-                            {
-                                "name": tbl["name"],
-                                "columns": list(
-                                    map(lambda c: c["name"], tbl["columns"])
-                                ),
-                            }
-                            for tbl in all_schemas[db]
-                            if tbl["name"] in tbls
-                        ],
-                    }
-                )
-            assert len(schemas) <= 5
-        elif resolution.startswith("baseline"):
-            with routing_file.open("r") as file:
-                routing = json.load(file)
-
-            schemas = []
-            pred_schemas = routing[idx]["pred_schemas"][:1]
 
             for pred_schema in pred_schemas:
                 db = pred_schema["database"]
@@ -266,9 +240,7 @@ def evaluate_text2sql(
 
 if __name__ == "__main__":
     datasets = {
-        # "spider": ["spider", "spider_syn", "spider_realistic"],
-        "spider": ["spider", "spider_syn"],
-        # "spider": ["spider", "spider_syn", "spider_realistic", "spider_dr"],
+        "spider": ["spider", "spider_syn", "spider_realistic"],
         "bird": ["bird"],
         # "fiben": ["fiben"],
     }
@@ -284,25 +256,31 @@ if __name__ == "__main__":
                 "table",
                 "column",
                 "random@5",
-                # "prediction@1",
-                # "prediction@5",
-                # "prediction@-1",
-                # "prediction@cot",
-                # "baseline@crush4sql_bm25",
-                # "baseline@dpr",
+                "prediction@1",
+                "prediction@5",
+                "prediction@-1",
+                "prediction@cot",
+                "baseline@crush_bm25@1",
+                "baseline@dpr@1",
+                "baseline@crush_bm25@5",
+                "baseline@dpr@5",
+                "baseline@crush_bm25@-1",
+                "baseline@dpr@-1",
+                "baseline@crush_bm25@cot",
+                "baseline@dpr@cot",
             ]:
                 if resolution.startswith("prediction"):
                     routing_file = (
                         routing_dirs[dataset] / f'{test.replace(dataset, "test")}.json'
                     )
                 elif resolution.startswith("baseline"):
-                    if resolution.endswith("crush4sql_bm25"):
+                    if "crush_bm25" in resolution:
                         routing_file = (
                             Path("results")
                             / "retrieval"
                             / f"crush4sql_{test}_sparse_false.json"
                         )
-                    elif resolution.endswith("dpr"):
+                    elif "dpr" in resolution:
                         routing_file = (
                             Path("results") / "retrieval" / f"{test}_dense_true.json"
                         )
