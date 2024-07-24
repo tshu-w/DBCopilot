@@ -22,7 +22,7 @@ def run_cli(config, debug: bool = True, command: str = "fit", devices: int = 1):
     os.chdir(os.environ["TUNE_ORIG_WORKING_DIR"])
 
     argv = ["./run", command]
-    ckpt_path = config.pop("ckpt_path")
+    ckpt_path = config.pop("ckpt_path", None)
     if ckpt_path is not None:
         config_path = Path(ckpt_path).parents[1] / "config.yaml"
         argv.extend(["--config", str(config_path)])
