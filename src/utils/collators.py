@@ -17,7 +17,7 @@ class Text2SchemaCollator:
     label_pad_token_id: int = -100
 
     def __call__(self, batch: list[dict]) -> dict[str, any]:
-        inputs, targets = [], []
+        sources, targets = [], []
         for instance in batch:
             question, schema = instance["question"], instance["schema"]
             if self.relational:
@@ -29,12 +29,12 @@ class Text2SchemaCollator:
             targets.append(target)
 
             if question is None:
-                inputs.append("")
+                sources.append("")
             else:
-                inputs.append(question)
+                sources.append(question)
 
         features = self.tokenizer(
-            text=inputs,
+            text=sources,
             text_target=targets,
             padding=True,
             truncation=True,
@@ -59,19 +59,19 @@ class Schema2TextCollator:
     label_pad_token_id: int = -100
 
     def __call__(self, batch: list[dict]) -> dict[str, any]:
-        inputs, targets = [], []
+        sources, targets = [], []
         for instance in batch:
             schema = stringize_schema(instance["schema"])
-            inputs.append(self.prompt_template.format(schema=schema))
+            sources.append(self.prompt_template.format(schema=schema))
 
         if "question" in batch[0]:
             targets = [instance["question"] for instance in batch]
         else:
-            targets = [""] * len(inputs)
+            targets = [""] * len(sources)
 
         if self.model_mode == "seq2seq":
             features = self.tokenizer(
-                text=inputs,
+                text=sources,
                 text_target=targets,
                 padding=True,
                 truncation=True,
@@ -81,10 +81,10 @@ class Schema2TextCollator:
         elif self.model_mode == "causal":
             targets = [
                 f"{s}{t}{self.tokenizer.eos_token}" if t else f"{s}"
-                for s, t in zip(inputs, targets, strict=True)
+                for s, t in zip(sources, targets, strict=True)
             ]
             features = self.tokenizer(
-                text=inputs,
+                text=sources,
                 text_target=targets,
                 padding=True,
                 truncation=True,
@@ -92,7 +92,7 @@ class Schema2TextCollator:
                 return_tensors="pt",
             )
             source_lens = self.tokenizer(
-                text=inputs,
+                text=sources,
                 truncation=True,
                 max_length=self.max_length,
                 return_length=True,
