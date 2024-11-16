@@ -18,7 +18,7 @@ The development of natural language interfaces to databases (NLIDB) has been gre
 First, install dependencies
 ```console
 # clone project
-git clone https://github.com/tshu-w/DBCopilot
+git clone --recursive https://github.com/tshu-w/DBCopilot
 cd DBCopilot
 
 # [SUGGESTED] use conda environment
