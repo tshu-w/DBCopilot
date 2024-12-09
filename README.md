@@ -3,7 +3,7 @@
 <h2 id="your-project-name">DBCᴏᴘɪʟᴏᴛ: Scaling Natural Language Querying to Massive Databases</h2>
 
 <p>
-<a href="https://arxiv.org/abs/2312.03463"><img src="http://img.shields.io/badge/arxiv-2312.03463-B31B1B.svg" alt="Arxiv" /></a>
+<a href="https://arxiv.org/abs/2312.03463"><img src="http://img.shields.io/badge/arXiv-2312.03463-B31B1B.svg?style=flat-square" alt="Arxiv" /></a>
 </p>
 
 </div>
