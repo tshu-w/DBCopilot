@@ -3,10 +3,15 @@
 <h2 id="your-project-name">DBCᴏᴘɪʟᴏᴛ: Scaling Natural Language Querying to Massive Databases</h2>
 
 <p>
-<a href="https://arxiv.org/abs/2312.03463"><img src="http://img.shields.io/badge/arXiv-2312.03463-B31B1B.svg?style=flat-square" alt="Arxiv" /></a>
+  <a href="https://edbticdt2025.upc.edu"><img src="http://img.shields.io/badge/EDBT-2025-4b44ce.svg?style=flat-square" alt="Conference" /></a>
+  <a href="https://arxiv.org/abs/2312.03463"><img src="http://img.shields.io/badge/arXiv-2312.03463-B31B1B.svg?style=flat-square" alt="Arxiv" /></a>
 </p>
 
 </div>
+
+## News
+
+- [2025-02-05] 🎉 Our paper has been accepted at [EDBT 2025](https://edbticdt2025.upc.edu).
 
 ## Description
 
