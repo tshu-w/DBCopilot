@@ -1,6 +1,6 @@
 <div align="center">
 
-<h2 id="your-project-name">DBCᴏᴘɪʟᴏᴛ: Natural Language Querying over Massive Database: via Schema Routing"</h2>
+<h2 id="your-project-name">DBCᴏᴘɪʟᴏᴛ: Natural Language Querying over Massive Database via Schema Routing"</h2>
 
 <p>
   <a href="https://edbticdt2025.upc.edu"><img src="http://img.shields.io/badge/EDBT-2025-4b44ce.svg?style=flat-square" alt="Conference" /></a>
