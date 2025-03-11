@@ -3,7 +3,7 @@
 <h2 id="your-project-name">DBCᴏᴘɪʟᴏᴛ: Natural Language Querying over Massive Database via Schema Routing</h2>
 
 <p>
-  <a href="https://edbticdt2025.upc.edu"><img src="http://img.shields.io/badge/EDBT-2025-4b44ce.svg?style=flat-square" alt="Conference" /></a>
+  <a href="https://openproceedings.org/2025/conf/edbt/paper-209.pdf"><img src="http://img.shields.io/badge/EDBT-2025-4b44ce.svg?style=flat-square" alt="Conference" /></a>
   <a href="https://arxiv.org/abs/2312.03463"><img src="http://img.shields.io/badge/arXiv-2312.03463-B31B1B.svg?style=flat-square" alt="Arxiv" /></a>
 </p>
 
@@ -69,15 +69,30 @@ You can also train and evaluate a single model with the `run` script.
 
 ## Citation
 ```
-@article{wang2023dbcopilot,
-  author       = {Tianshu Wang and Hongyu Lin and Xianpei Han and Le Sun and Xiaoyang Chen and Hao Wang and Zhenyu Zeng},
-  title        = {DBCopilot: Scaling Natural Language Querying to Massive Databases},
-  journal      = {CoRR},
-  year         = 2023,
-  volume       = {abs/2312.03463},
-  doi          = {10.48550/arXiv.2312.03463},
-  eprint       = {2312.03463},
-  eprinttype   = {arXiv},
-  url          = {https://doi.org/10.48550/arXiv.2312.03463},
+@inproceedings{DBLP:conf/edbt/WangCLH0WZ25,
+  author       = {Tianshu Wang and
+                  Xiaoyang Chen and
+                  Hongyu Lin and
+                  Xianpei Han and
+                  Le Sun and
+                  Hao Wang and
+                  Zhenyu Zeng},
+  editor       = {Alkis Simitsis and
+                  Bettina Kemme and
+                  Anna Queralt and
+                  Oscar Romero and
+                  Petar Jovanovic},
+  title        = {DBCopilot: Natural Language Querying over Massive Databases via Schema
+                  Routing},
+  booktitle    = {Proceedings 28th International Conference on Extending Database Technology,
+                  {EDBT} 2025, Barcelona, Spain, March 25-28, 2025},
+  pages        = {707--721},
+  publisher    = {OpenProceedings.org},
+  year         = {2025},
+  url          = {https://doi.org/10.48786/edbt.2025.57},
+  doi          = {10.48786/EDBT.2025.57},
+  timestamp    = {Mon, 10 Mar 2025 16:32:47 +0100},
+  biburl       = {https://dblp.org/rec/conf/edbt/WangCLH0WZ25.bib},
+  bibsource    = {dblp computer science bibliography, https://dblp.org}
 }
 ```
