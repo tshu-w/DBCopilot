@@ -11,7 +11,7 @@
 
 ## News
 
-- [2025-03-06] 🏆 Our paper has been chosen as Runner-Up for Best Research Paper Award at EDBT 2025!
+- [2025-03-06] 🏆 Our paper has been chosen as [Runner-Up for Best Research Paper Award](https://edbticdt2025.upc.edu/?contents=best-paper-EDBT.html) at EDBT 2025!
 - [2025-02-05] 🎉 Our paper has been accepted at [EDBT 2025](https://edbticdt2025.upc.edu).
 
 ## Description
