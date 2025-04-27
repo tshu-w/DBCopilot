@@ -15,7 +15,7 @@ from src.utils.helpers import schema2graph, snode
 
 def synthesize_data(
     dataset: str,
-    ckpt_path: str,
+    model_name_or_path: str,
     n_walks: int,
     p: float = 1.0,
     q: float = 1.0,
@@ -84,7 +84,12 @@ def synthesize_data(
         synthetic_data.append({"schema": schema, "sql": ""})
 
     ds = Dataset.from_list(synthetic_data)
-    model = SchemaQuestioning.load_from_checkpoint(ckpt_path)
+    model = SchemaQuestioning(
+        model_name_or_path,
+        peft_config=None,
+        generator_config={"max_new_tokens": 128},
+        max_length=256,
+    )
     dataloader = DataLoader(
         ds, batch_size=256, collate_fn=model.collate_fn, num_workers=32
     )
@@ -104,8 +109,8 @@ if __name__ == "__main__":
         "bird",
         "fiben",
     ]
-    ckpt_paths = [
-        "results/fit/desert-plant-57/vdn2mg9m/checkpoints/epoch=19-step=14120.ckpt"
+    model_name_or_paths = [
+        "wangtianshu/schema-questioner",
     ]
     n_walks_lst = [
         100000,
@@ -113,7 +118,7 @@ if __name__ == "__main__":
         100000,
     ]
 
-    for dataset, ckpt_path, n_walks in zip(
-        datasets, ckpt_paths * len(datasets), n_walks_lst, strict=True
+    for dataset, model_name_or_path, n_walks in zip(
+        datasets, model_name_or_paths * len(datasets), n_walks_lst, strict=True
     ):
-        synthesize_data(dataset, ckpt_path, n_walks=n_walks)
+        synthesize_data(dataset, model_name_or_path, n_walks=n_walks)
